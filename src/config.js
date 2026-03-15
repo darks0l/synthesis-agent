@@ -48,7 +48,7 @@ export const config = {
   // ── LLM / Bankr Gateway ──
   llm: {
     bankrApiKey: process.env.BANKR_API_KEY || readKey('bankr-api-key.txt'),
-    bankrGateway: 'https://ai.bankr.bot/api/v1',
+    bankrGateway: 'https://llm.bankr.bot/v1',
     fallbackModel: 'anthropic/claude-sonnet-4-20250514',
     cheapModel: 'meta-llama/llama-3.3-70b-instruct',
   },
