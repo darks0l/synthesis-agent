@@ -28,6 +28,7 @@ import { LLMGateway } from './llm.js';
 import { Scanner } from './scanner.js';
 import { Executor } from './executor.js';
 import { Reporter } from './reporter.js';
+import { Orchestrator, SkillType } from './orchestrator.js';
 
 // ── Banner ──
 function banner() {
@@ -59,6 +60,7 @@ async function main() {
   const llm = new LLMGateway();
   const scanner = new Scanner(provider);
   const executor = new Executor(provider);
+  const orchestrator = new Orchestrator(provider, config.orchestrator.contractAddress);
   const reporter = new Reporter(identity, scanner, executor, llm);
 
   // Verify identity
@@ -74,6 +76,9 @@ async function main() {
   // Check LLM gateway
   log('main', `🧠 LLM Gateway: ${llm.available ? '✓ connected' : '✗ no API key (using fallback)'}`);
 
+  // Check orchestrator
+  log('main', `🔗 ERC-8183 Orchestrator: ${orchestrator.deployed ? '✓ ' + config.orchestrator.contractAddress : '✗ not deployed (local-only mode)'}`);
+
   // ── Agent Loop ──
   async function cycle() {
     log('main', `═══ Cycle ${reporter.cycleCount + 1} ═══`);
@@ -88,32 +93,48 @@ async function main() {
       let decision = null;
       let tradeResult = null;
 
+      // Load wallet once for the cycle
+      let wallet = null;
+      try {
+        const { readFileSync } = await import('fs');
+        const { join, dirname } = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __dirname = dirname(fileURLToPath(import.meta.url));
+        const raw = readFileSync(join(__dirname, '..', '..', '.keys', 'base-deployer.txt'), 'utf8');
+        const match = raw.match(/DEPLOYER_KEY=(0x[a-fA-F0-9]+)/);
+        const pk = match ? match[1] : raw.trim();
+        wallet = new ethers.Wallet(pk, provider);
+      } catch (err) {
+        logError('main', `Cannot load wallet: ${err.message}`);
+      }
+
       if (best) {
-        // 3. Ask LLM to evaluate
+        // 3. Post ERC-8183 job for trade evaluation (if orchestrator deployed)
+        let orchestratorJob = null;
+        if (orchestrator.deployed && wallet) {
+          orchestratorJob = await orchestrator.postTradeEvalJob(best, wallet);
+          if (orchestratorJob) {
+            log('main', `🔗 ERC-8183 job #${orchestratorJob.jobId} posted for trade eval`);
+          }
+        }
+
+        // 4. Ask LLM to evaluate (or use outsourced result when available)
         log('main', `🧠 Evaluating: ${best.pair} (${best.spreadBps}bps spread)`);
         decision = await llm.evaluateOpportunity(best);
         log('main', `Decision: execute=${decision.execute}, confidence=${decision.confidence}%`);
 
-        // 4. Execute if approved
-        if (decision.execute && decision.confidence >= 60) {
-          // We need a wallet to execute — check agent signer or direct
-          // For now, log the decision. Real execution needs wallet loaded.
-          log('main', '🔄 Trade approved by AI — checking wallet...');
+        // 5. If orchestrator job was posted, self-fulfill with our evaluation result
+        //    (Demo: shows full ERC-8183 lifecycle. Production: other agents would do this.)
+        if (orchestratorJob && config.orchestrator.selfFulfill && wallet) {
+          await orchestrator.selfFulfill(orchestratorJob.jobId, decision, wallet);
+        }
 
-          // Try to load wallet from .keys
-          try {
-            const { readFileSync } = await import('fs');
-            const { join, dirname } = await import('path');
-            const { fileURLToPath } = await import('url');
-            const __dirname = dirname(fileURLToPath(import.meta.url));
-            const raw = readFileSync(join(__dirname, '..', '..', '.keys', 'base-deployer.txt'), 'utf8');
-            // Parse key from DEPLOYER_KEY=0x... format
-            const match = raw.match(/DEPLOYER_KEY=(0x[a-fA-F0-9]+)/);
-            const pk = match ? match[1] : raw.trim();
-            const wallet = new ethers.Wallet(pk, provider);
+        // 6. Execute if approved
+        if (decision.execute && decision.confidence >= 60) {
+          log('main', '🔄 Trade approved by AI — executing...');
+          if (wallet) {
             tradeResult = await executor.executeSwap(best, wallet);
-          } catch (err) {
-            logError('main', `Cannot load wallet: ${err.message}`);
+          } else {
             tradeResult = { success: false, reason: 'No wallet available' };
           }
         } else {
@@ -121,7 +142,7 @@ async function main() {
           tradeResult = { success: false, reason: `Below confidence threshold (${decision.confidence}%)` };
         }
 
-        // 5. Record receipt
+        // 7. Record receipt with ERC-8183 job reference
         identity.recordReceipt({
           type: 'trade_evaluation',
           pair: best.pair,
@@ -129,9 +150,18 @@ async function main() {
           decision: decision.execute ? 'execute' : 'skip',
           confidence: decision.confidence,
           txHash: tradeResult?.txHash || null,
+          erc8183JobId: orchestratorJob?.jobId ?? null,
         });
       } else {
         log('main', '📊 No opportunities above threshold');
+      }
+
+      // 8. Check pending ERC-8183 jobs
+      if (orchestrator.deployed && wallet) {
+        const jobResults = await orchestrator.checkJobs(wallet);
+        if (jobResults.length > 0) {
+          log('main', `🔗 ERC-8183: ${jobResults.length} job(s) updated`);
+        }
       }
 
       // 6. Report
@@ -153,10 +183,13 @@ async function main() {
   if (once) {
     log('main', '✓ Single cycle complete. Exiting.');
     const summary = identity.summary();
+    const orchStats = orchestrator.stats();
     console.log('\n📋 Session Summary:');
     console.log(`   Actions: ${summary.totalActions}`);
     console.log(`   Trades: ${executor.stats().tradesExecuted}`);
     console.log(`   LLM calls: ${llm.stats().calls} (${llm.stats().tokens} tokens)`);
+    console.log(`   ERC-8183 jobs: ${orchStats.jobsPosted} posted, ${orchStats.jobsCompleted} completed`);
+    console.log(`   Orchestrator spent: $${orchStats.totalSpent} USDC`);
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);
   }

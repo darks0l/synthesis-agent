@@ -18,7 +18,7 @@
 - [x] Verify dry run works
 - [x] Push to GitHub (public)
 - [x] Store Uniswap API key
-- [ ] Execute first real on-chain swap (small ETH→USDC)
+- [x] Execute first real on-chain swap (small ETH→USDC) — TX: 0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259
 - [ ] Wire Bankr LLM Gateway (get API key)
 - [ ] Deploy AgentSpendingPolicy contract on Base
 
@@ -69,3 +69,6 @@
 - Pushed to GitHub: https://github.com/darks0l/synthesis-agent
 - Received $10 ETH funding from Meta
 - Stored Uniswap API key
+- Fixed key parsing, USDC balance fallback, smart LLM heuristic
+- **FIRST LIVE TRADE** — 0.0005 ETH → 1.05 USDC via Uniswap V3 (TX: 0x10dfa86...)
+- Agent running in continuous live mode — scanning every 60s, auto-trading

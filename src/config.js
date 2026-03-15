@@ -78,6 +78,13 @@ export const config = {
     ],
   },
 
+  // ── ERC-8183 Orchestrator ──
+  orchestrator: {
+    contractAddress: process.env.SYNTHESIS_JOBS_ADDRESS || null, // Set after deployment
+    enabled: process.argv.includes('--orchestrate') || !!process.env.SYNTHESIS_JOBS_ADDRESS,
+    selfFulfill: true, // Demo mode: agent fulfills its own jobs to show lifecycle
+  },
+
   // ── Flags ──
   dryRun: process.argv.includes('--dry-run'),
   verbose: process.argv.includes('--verbose') || process.argv.includes('-v'),
