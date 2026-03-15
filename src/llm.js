@@ -97,12 +97,25 @@ Consider: is the profit worth the gas? Is the spread suspicious? Would you execu
     return { execute: false, confidence: 20, reasoning: 'Could not parse LLM response' };
   }
 
-  /** Simple heuristic fallback when no LLM available */
+  /** Heuristic fallback when no LLM available — uses spread data to decide */
   _fallbackAnalysis(prompt) {
+    // Extract spread from prompt if possible
+    const bpsMatch = prompt.match(/(\d+)\s*bps/);
+    const spreadBps = bpsMatch ? parseInt(bpsMatch[1]) : 0;
+
+    // If spread is decent (>= 40bps), approve with moderate confidence
+    if (spreadBps >= 40) {
+      return JSON.stringify({
+        execute: true,
+        confidence: 65,
+        reasoning: `Fallback heuristic: ${spreadBps}bps spread is above 40bps threshold. Small position approved.`,
+      });
+    }
+
     return JSON.stringify({
       execute: false,
-      confidence: 50,
-      reasoning: 'Fallback analysis — no LLM gateway available. Defaulting to conservative.',
+      confidence: 40,
+      reasoning: `Fallback heuristic: ${spreadBps}bps spread is below 40bps threshold. Skipping.`,
     });
   }
 

@@ -105,7 +105,7 @@ export class Executor {
         fee: opportunity.fee || 3000,
         recipient: config.agentAddress,
         amountIn: amountInWei,
-        amountOutMinimum: 0n, // In production, use slippage protection
+        amountOutMinimum: 1n, // Minimal slippage protection — accept any nonzero output
         sqrtPriceLimitX96: 0n,
       };
 

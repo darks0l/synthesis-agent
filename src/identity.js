@@ -32,12 +32,17 @@ export class AgentIdentity {
   /** Get current wallet balances */
   async getBalances() {
     const ethBalance = await this.provider.getBalance(this.address);
-    const usdcContract = new ethers.Contract(
-      config.tokens.USDC,
-      ['function balanceOf(address) view returns (uint256)'],
-      this.provider
-    );
-    const usdcBalance = await usdcContract.balanceOf(this.address);
+    let usdcBalance = 0n;
+    try {
+      const usdcContract = new ethers.Contract(
+        config.tokens.USDC,
+        ['function balanceOf(address) view returns (uint256)'],
+        this.provider
+      );
+      usdcBalance = await usdcContract.balanceOf(this.address);
+    } catch {
+      log('identity', '⚠ USDC balance check failed (RPC issue) — assuming 0');
+    }
 
     return {
       eth: ethers.formatEther(ethBalance),
