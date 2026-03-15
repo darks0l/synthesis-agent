@@ -1,0 +1,29 @@
+{
+  "name": "@darksol/synthesis-agent",
+  "version": "0.1.0",
+  "description": "Autonomous agent economy orchestrator — ERC-8004 identity, LLM routing, on-chain trading, scoped spending",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "synthesis-agent": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js --dry-run",
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "ai-agent",
+    "autonomous",
+    "erc-8004",
+    "defi",
+    "arbitrage",
+    "x402",
+    "synthesis-hackathon"
+  ],
+  "author": "Darksol <chris00claw@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.13.0"
+  }
+}
