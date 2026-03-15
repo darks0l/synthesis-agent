@@ -29,6 +29,7 @@ import { Scanner } from './scanner.js';
 import { Executor } from './executor.js';
 import { Reporter } from './reporter.js';
 import { Orchestrator, SkillType } from './orchestrator.js';
+import { FeedbackLoop } from './feedback.js';
 
 // ── Banner ──
 function banner() {
@@ -61,6 +62,7 @@ async function main() {
   const scanner = new Scanner(provider);
   const executor = new Executor(provider);
   const orchestrator = new Orchestrator(provider, config.orchestrator.contractAddress);
+  const feedback = new FeedbackLoop();
   const reporter = new Reporter(identity, scanner, executor, llm);
 
   // Verify identity
@@ -126,23 +128,42 @@ async function main() {
         // 5. If orchestrator job was posted, self-fulfill with our evaluation result
         //    (Demo: shows full ERC-8183 lifecycle. Production: other agents would do this.)
         if (orchestratorJob && config.orchestrator.selfFulfill && wallet) {
-          await orchestrator.selfFulfill(orchestratorJob.jobId, decision, wallet);
+          const fulfillResult = await orchestrator.selfFulfill(orchestratorJob.jobId, decision, wallet);
+
+          // Evaluate the outsourced result against our history (feedback loop)
+          if (fulfillResult) {
+            const evaluation = feedback.evaluateOutsourcedResult(decision, best);
+            log('main', `🔄 Feedback: quality=${evaluation.quality}${evaluation.insight ? ` | insight: ${evaluation.insight.substring(0, 60)}` : ''}`);
+          }
         }
 
-        // 6. Execute if approved
-        if (decision.execute && decision.confidence >= 60) {
-          log('main', '🔄 Trade approved by AI — executing...');
+        // 6. Execute if approved — use adaptive threshold from feedback
+        const threshold = Math.max(50, 60 - feedback.learnings.confidenceBoost);
+        if (decision.execute && decision.confidence >= threshold) {
+          log('main', `🔄 Trade approved (confidence ${decision.confidence}% >= ${threshold}% adaptive threshold) — executing...`);
           if (wallet) {
             tradeResult = await executor.executeSwap(best, wallet);
           } else {
             tradeResult = { success: false, reason: 'No wallet available' };
           }
         } else {
-          log('main', `⏭️ Skipping: confidence ${decision.confidence}% < 60% threshold`);
+          log('main', `⏭️ Skipping: confidence ${decision.confidence}% < ${threshold}% threshold`);
           tradeResult = { success: false, reason: `Below confidence threshold (${decision.confidence}%)` };
         }
 
-        // 7. Record receipt with ERC-8183 job reference
+        // 7. Record trade in feedback loop (builds learning data)
+        feedback.recordTrade({
+          pair: best.pair,
+          spreadBps: best.spreadBps,
+          decision: decision.execute ? 'execute' : 'skip',
+          confidence: decision.confidence,
+          txHash: tradeResult?.txHash || null,
+          amountIn: best.amountIn,
+          source: orchestratorJob ? 'orchestrated' : 'self',
+          erc8183JobId: orchestratorJob?.jobId ?? null,
+        });
+
+        // 8. Record receipt with ERC-8183 job reference
         identity.recordReceipt({
           type: 'trade_evaluation',
           pair: best.pair,
@@ -188,8 +209,11 @@ async function main() {
     console.log(`   Actions: ${summary.totalActions}`);
     console.log(`   Trades: ${executor.stats().tradesExecuted}`);
     console.log(`   LLM calls: ${llm.stats().calls} (${llm.stats().tokens} tokens)`);
+    const fbStats = feedback.stats();
     console.log(`   ERC-8183 jobs: ${orchStats.jobsPosted} posted, ${orchStats.jobsCompleted} completed`);
     console.log(`   Orchestrator spent: $${orchStats.totalSpent} USDC`);
+    console.log(`   Feedback: ${fbStats.totalTrades} trades logged, ${fbStats.improvementsAdopted} improvements adopted`);
+    console.log(`   Adaptive threshold: ${fbStats.currentMinSpreadBps}bps min spread`);
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);
   }

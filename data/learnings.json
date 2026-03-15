@@ -1,0 +1,15 @@
+{
+  "minSpreadBps": 40,
+  "confidenceBoost": 0,
+  "providerScores": {},
+  "pairInsights": {
+    "WETH/USDC": {
+      "trades": 1,
+      "wins": 0,
+      "avgSpread": 44,
+      "lastOutcome": null
+    }
+  },
+  "totalEvaluations": 0,
+  "improvementsAdopted": 0
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "timestamp": "2026-03-15T20:21:04.047Z",
+    "pair": "WETH/USDC",
+    "spreadBps": 44,
+    "decision": "execute",
+    "confidence": 65,
+    "txHash": "0xdrydrydrydrydrydrydrydrydrydrydrydrydrydrydrydrydrydrydrydrydry0",
+    "amountIn": "0.0005",
+    "amountOut": null,
+    "source": "self",
+    "erc8183JobId": null,
+    "gasUsed": null,
+    "profitable": null
+  }
+]
