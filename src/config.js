@@ -45,12 +45,30 @@ export const config = {
     token: process.env.AGENT_SIGNER_TOKEN || null,
   },
 
-  // ── LLM / Bankr Gateway ──
+  // ── LLM Providers (priority order: bankr → openai → anthropic → openrouter → ollama → heuristic) ──
   llm: {
+    // Bankr LLM Gateway (primary — closes the economic loop)
     bankrApiKey: process.env.BANKR_API_KEY || readKey('bankr-api-key.txt'),
     bankrGateway: 'https://llm.bankr.bot/v1',
-    fallbackModel: 'anthropic/claude-sonnet-4-20250514',
-    cheapModel: 'meta-llama/llama-3.3-70b-instruct',
+    // OpenAI
+    openaiApiKey: process.env.OPENAI_API_KEY || readKey('openai-api-key.txt'),
+    openaiGateway: 'https://api.openai.com/v1',
+    // Anthropic
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || readKey('anthropic-api-key.txt'),
+    anthropicGateway: 'https://api.anthropic.com/v1',
+    // OpenRouter
+    openrouterApiKey: process.env.OPENROUTER_API_KEY || readKey('openrouter-api-key.txt'),
+    openrouterGateway: 'https://openrouter.ai/api/v1',
+    // Local Ollama (free, no key needed)
+    ollamaUrl: process.env.OLLAMA_URL || 'http://192.168.68.78:11434',
+    ollamaModel: process.env.OLLAMA_MODEL || 'qwen3.5:latest',
+    // Model preferences per provider
+    models: {
+      bankr: 'meta-llama/llama-3.3-70b-instruct',
+      openai: 'gpt-4o-mini',
+      anthropic: 'claude-sonnet-4-20250514',
+      openrouter: 'meta-llama/llama-3.3-70b-instruct',
+    },
   },
 
   // ── Uniswap ──
