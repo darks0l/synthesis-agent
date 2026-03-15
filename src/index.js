@@ -106,7 +106,10 @@ async function main() {
             const { join, dirname } = await import('path');
             const { fileURLToPath } = await import('url');
             const __dirname = dirname(fileURLToPath(import.meta.url));
-            const pk = readFileSync(join(__dirname, '..', '..', '.keys', 'base-deployer.txt'), 'utf8').trim();
+            const raw = readFileSync(join(__dirname, '..', '..', '.keys', 'base-deployer.txt'), 'utf8');
+            // Parse key from DEPLOYER_KEY=0x... format
+            const match = raw.match(/DEPLOYER_KEY=(0x[a-fA-F0-9]+)/);
+            const pk = match ? match[1] : raw.trim();
             const wallet = new ethers.Wallet(pk, provider);
             tradeResult = await executor.executeSwap(best, wallet);
           } catch (err) {
