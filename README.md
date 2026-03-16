@@ -5,111 +5,153 @@
 
 # Synthesis Agent
 
-> Autonomous agent economy orchestrator — built for [The Synthesis Hackathon](https://synthesis.devfolio.co) (March 13-22, 2026)
+> **An autonomous agent economy orchestrator** — the agent that trades, pays its own bills, outsources skills to other agents, and learns from every decision. Built for [The Synthesis Hackathon](https://synthesis.devfolio.co) (March 15-22, 2026).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org)
 [![Base](https://img.shields.io/badge/Chain-Base-blue.svg)](https://base.org)
+[![ERC-8004](https://img.shields.io/badge/ERC--8004-Identity-purple.svg)](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba)
+[![ERC-8183](https://img.shields.io/badge/ERC--8183-Agentic%20Commerce-orange.svg)](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617)
 
 ---
 
-## What Is This?
+## The Thesis
 
-An AI agent that **autonomously trades, pays, routes LLM inference, and operates on-chain** — with full auditability, ERC-8004 identity, scoped spending permissions, and self-sustaining economics.
+Most "AI agents" are chatbots with a wallet. This one runs a business.
 
-It doesn't just talk. It thinks, evaluates, executes, and reports. Every action is traceable on-chain.
+**Synthesis Agent** is a self-sustaining autonomous agent that:
+1. **Scans** multiple DEXs for cross-exchange arbitrage opportunities
+2. **Routes** trade evaluations through a multi-provider LLM cascade (Bankr → OpenAI → Anthropic → OpenRouter → Ollama → hardcoded heuristic)
+3. **Executes** trades within scoped spending limits
+4. **Outsources** skills it needs to other agents via ERC-8183 on-chain job contracts
+5. **Learns** from every trade — validates outsourced work against its own history, adopts better heuristics
+6. **Reports** every action with on-chain receipts tied to its ERC-8004 identity
 
-## The Autonomous Loop
+The closed loop: **Trade profits → fund LLM inference → smarter trades → more profit → afford better agent help → repeat.**
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│                 SYNTHESIS AGENT                  │
-│                                                  │
-│  1. Wake up with ERC-8004 identity              │
-│  2. Check wallet balances                        │
-│  3. Scan DEXs for opportunities                  │
-│     ├── Uniswap V3 (quotes)                     │
-│     └── Aerodrome (quotes)                       │
-│  4. Route evaluation through Bankr LLM Gateway   │
-│  5. AI decides: execute or skip?                 │
-│  6. Execute via scoped spending limits           │
-│  7. Log receipt (on-chain traceable)             │
-│  8. Report results                               │
-│  9. Wait → repeat                                │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      SYNTHESIS AGENT LOOP                        │
+│                                                                  │
+│  ┌─────────┐    ┌───────────┐    ┌──────────────┐               │
+│  │ Identity │───▶│  Scanner  │───▶│  Orchestrator│               │
+│  │ ERC-8004 │    │ Uni + Aero│    │  ERC-8183    │               │
+│  └─────────┘    └─────┬─────┘    └──────┬───────┘               │
+│                       │                  │                        │
+│                       ▼                  ▼                        │
+│              ┌────────────────┐  ┌──────────────┐               │
+│              │   LLM Gateway  │  │   Feedback   │               │
+│              │ 6-provider     │  │   Loop       │               │
+│              │ cascade        │  │              │               │
+│              └────────┬───────┘  └──────┬───────┘               │
+│                       │                  │                        │
+│                       ▼                  ▼                        │
+│              ┌────────────────┐  ┌──────────────┐               │
+│              │   Executor     │  │   Reporter   │               │
+│              │ Scoped limits  │──▶│ On-chain log │               │
+│              │ $2/tx $20/day  │  │              │               │
+│              └────────────────┘  └──────────────┘               │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────┐        │
+│  │               DEPENDENCY LAYER                       │        │
+│  │  @darksol/terminal  •  Facilitator  •  Agent Signer  │        │
+│  │  @darksol/bankr-router  •  x402 Client               │        │
+│  └─────────────────────────────────────────────────────┘        │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/darks0l/synthesis-agent.git
-cd synthesis-agent
+cd synthesis-agent && npm install
 
-# Install
-npm install
-
-# Dry run (scan + evaluate, no trades)
+# Dry run — scan + evaluate, no trades
 npm run dev
 
-# Live mode (single cycle)
+# Live single cycle
 node src/index.js --once
 
-# Continuous mode
+# Continuous live mode (scans every 60s)
 npm start
+
+# Run ERC-8183 lifecycle demo
+node scripts/demo-erc8183.js
 ```
 
-## Architecture
+## Modules
 
-```
-synthesis-agent/
-├── src/
-│   ├── index.js      → Main orchestrator loop
-│   ├── config.js     → Configuration + key loading
-│   ├── identity.js   → ERC-8004 verification + receipt logging
-│   ├── llm.js        → Bankr LLM Gateway integration
-│   ├── scanner.js    → Cross-DEX price scanner (Uniswap V3 + Aerodrome)
-│   ├── executor.js   → Trade execution with spending limits
-│   ├── reporter.js   → Formatted activity reports
-│   └── logger.js     → Structured logging
-├── logs/             → Daily agent log files
-└── package.json
-```
+| Module | File | Purpose |
+|--------|------|---------|
+| **Identity** | `src/identity.js` | ERC-8004 verification, receipt logging, balance tracking |
+| **Scanner** | `src/scanner.js` | Cross-DEX price comparison (Uniswap V3 QuoterV2 + Aerodrome) |
+| **LLM Gateway** | `src/llm.js` | 6-provider cascade with automatic failover |
+| **Orchestrator** | `src/orchestrator.js` | ERC-8183 job posting, bidding, fulfillment, price discovery |
+| **Executor** | `src/executor.js` | Trade execution with per-TX and daily spending caps |
+| **Feedback** | `src/feedback.js` | Validates outsourced work against trade history, adapts thresholds |
+| **Reporter** | `src/reporter.js` | Formatted activity reports per cycle |
+| **Config** | `src/config.js` | Centralized configuration, key loading |
+| **Logger** | `src/logger.js` | Structured timestamped logging |
 
 ## Key Features
 
 ### 🆔 ERC-8004 On-Chain Identity
-The agent has a verified on-chain identity via [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004). Every action is tied to this identity, creating an auditable trail.
 
-- Identity TX: [`0x5394...efba`](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba)
-- Agent Address: `0x3e6e304421993D7E95a77982E11C93610DD4fFC5`
+Every action is tied to a verified on-chain identity. The agent proves who it is before operating.
 
-### 🧠 LLM-Powered Decision Making
-Routes inference through the [Bankr LLM Gateway](https://ai.bankr.bot) for cost-optimized AI evaluation. The agent doesn't blindly trade — it asks an LLM to evaluate each opportunity with confidence scoring.
+- **Identity TX**: [`0x5394...efba`](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba)
+- **Agent Address**: [`0x3e6e304421993D7E95a77982E11C93610DD4fFC5`](https://basescan.org/address/0x3e6e304421993D7E95a77982E11C93610DD4fFC5)
+
+### 🤝 ERC-8183 Agentic Commerce
+
+The agent outsources skills it needs to other agents via on-chain job contracts:
+
+- **5 skill types**: TradeEval, MarketScan, RiskAssess, PriceQuote, Custom
+- **Full state machine**: Open → Funded → Submitted → Completed/Rejected/Expired
+- **On-chain price discovery**: Running averages per skill type — the market sets the price of agent labor
+- **Provider reputation**: Success rate tracking, on-chain attestations
+- **USDC escrow**: Zero-fee, payment released only on evaluator attestation
+
+**Contract**: [`0xCB98F0e2bb429E4a05203C57750A97Db280e6617`](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617)
+
+### 🧠 Multi-Provider LLM Routing
+
+6-provider cascade with automatic failover — the agent always has AI, never crashes on a provider outage:
+
+1. **Bankr Gateway** (primary — closes the economic loop)
+2. **OpenAI** (GPT-4o)
+3. **Anthropic** (Claude Sonnet)
+4. **OpenRouter** (any model)
+5. **Ollama** (local, free)
+6. **Hardcoded heuristic** (last resort — spread ≥ 40bps → 65% confidence)
 
 ### 🔍 Cross-DEX Arbitrage Scanner
-Real-time price comparison across:
-- **Uniswap V3** — QuoterV2 for exact output quotes
-- **Aerodrome** — Base's native DEX
 
-Scans configurable pairs (WETH/USDC, WETH/DAI) and identifies spreads above threshold.
+Real-time price comparison:
+- **Uniswap V3** — QuoterV2 exact output quotes (fee tiers 500/3000/10000)
+- **Aerodrome** — Stable and volatile pool quotes
+- Configurable pairs: WETH/USDC, USDC/WETH, WETH/DAI
+- Minimum spread threshold: 40bps (adaptive via feedback loop)
+
+### 🔄 Feedback Loop
+
+The agent doesn't blindly trust outsourced evaluations:
+- Validates provider recommendations against its own trade history
+- If an outsourced evaluation would have been better → adopts the heuristic
+- If worse → rejects with on-chain reputation hit
+- Adaptive thresholds evolve with data
 
 ### 💱 Scoped Spending Limits
-Built-in guardrails:
-- **Per-transaction cap** — max $2 per swap (configurable)
-- **Daily spending limit** — max $20/day (configurable)
-- **Cooldown period** — minimum 30s between trades
-- **Confidence threshold** — only executes when AI confidence ≥ 60%
 
-### 📋 Receipt Logging
-Every action (scan, evaluation, trade, skip) is logged as a structured receipt with:
-- Timestamp, agent address, ERC-8004 reference
-- Decision details (AI reasoning, confidence score)
-- Transaction hash (when executed)
+Built-in guardrails:
+- **Per-transaction cap**: $2 max per swap
+- **Daily spending limit**: $20/day max
+- **Cooldown**: 30s minimum between trades
+- **Confidence threshold**: Only executes when AI confidence ≥ 60%
 
 ## Configuration
-
-Environment variables override defaults:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -119,25 +161,43 @@ Environment variables override defaults:
 | `SCAN_INTERVAL` | `60000` | Scan interval (ms) |
 | `BANKR_API_KEY` | from `.keys/` | Bankr LLM Gateway key |
 | `UNISWAP_API_KEY` | from `.keys/` | Uniswap API key |
-| `AGENT_SIGNER_URL` | `http://127.0.0.1:18790` | Agent Signer proxy URL |
-
-## Dependencies (Pre-existing Infrastructure)
-
-This agent orchestrates components from the DARKSOL ecosystem:
-
-- **[@darksol/terminal](https://www.npmjs.com/package/@darksol/terminal)** — CLI with swap, arb, and AI intent engine
-- **[DARKSOL Facilitator](https://facilitator.darksol.net)** — Free x402 on-chain payment facilitator (Base + Polygon)
-- **Agent Signer** — Local HTTP signing proxy with spending limits and audit log
-
-## Human-Agent Collaboration
-
-This project was built through continuous human-agent collaboration between **Meta** (human) and **Darksol** (AI agent running on OpenClaw). The conversation log documenting the entire build process is available in the submission.
+| `SYNTHESIS_JOBS_ADDRESS` | `0xCB98...6617` | ERC-8183 contract |
 
 ## On-Chain Artifacts
 
-- **ERC-8004 Identity**: [BaseScan TX](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba)
-- **Agent Address**: [`0x3e6e304421993D7E95a77982E11C93610DD4fFC5`](https://basescan.org/address/0x3e6e304421993D7E95a77982E11C93610DD4fFC5)
-- **Trade History**: See `logs/` directory for full receipt trail
+| Artifact | Link |
+|----------|------|
+| ERC-8004 Identity | [BaseScan](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba) |
+| SynthesisJobs Contract | [BaseScan](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617) |
+| First Trade (ETH→USDC) | [BaseScan](https://basescan.org/tx/0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259) |
+| ERC-8183 Job #1 Complete | [BaseScan](https://basescan.org/tx/0x96d71378773a2d7fb8061bad6c7d768c5526152ce0d08feb26d67b8a984bc1c1) |
+| USDC→ETH Refuel | [BaseScan](https://basescan.org/tx/0xbe7f5b9866144927d76febcc723be328cc14c7257348ffee3bf3522766e677f0) |
+| Contract Deploy | [BaseScan](https://basescan.org/tx/0x31e5960b1841f6d368351cd36f9a02786e7ea4d9a8f3d5ddcc98798a4d52d44e) |
+
+## Dependencies (Pre-existing DARKSOL Infrastructure)
+
+| Package | npm | Purpose |
+|---------|-----|---------|
+| `@darksol/terminal` | [v0.13.1](https://www.npmjs.com/package/@darksol/terminal) | Unified CLI — swap, arb engine, AI intent, agent signer |
+| `@darksol/bankr-router` | [v1.2.0](https://www.npmjs.com/package/@darksol/bankr-router) | Smart LLM routing with context compression |
+| DARKSOL Facilitator | [facilitator.darksol.net](https://facilitator.darksol.net) | Free x402 on-chain payment facilitator (Base + Polygon) |
+
+## Prize Tracks
+
+| Track | Prize | Relevance |
+|-------|-------|-----------|
+| Let the Agent Cook | $4k / $2.5k / $1.5k | Autonomous trading + LLM evaluation + self-sustaining economics |
+| ERC-8004 Agents With Receipts | $4k / $3k / $1k | Verified identity + on-chain receipt trail |
+| Bankr LLM Gateway | $3k / $1.5k / $500 | Primary LLM provider, economic loop |
+| Uniswap Agentic Finance | $2.5k / $1.5k / $1k | Cross-DEX scanner, Uniswap V3 integration |
+| AgentCash x402 | $1k / $500 / $250 | x402 facilitator integration |
+| bond.credit | $1k / $500 | On-chain identity + reputation |
+| Open Track | $14.5k pool | Full stack showcase |
+| Status Network Gasless | $50 guaranteed | Sepolia deployment |
+
+## Human-Agent Collaboration
+
+Built through continuous collaboration between **Meta** (human) and **Darksol** (AI agent on [OpenClaw](https://openclaw.dev)). Every decision, code change, and deployment documented in the conversation log. The agent doesn't just write code — it deploys contracts, executes trades, manages wallets, and makes strategic decisions in real time.
 
 ## License
 
