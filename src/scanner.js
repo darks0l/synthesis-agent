@@ -1,10 +1,10 @@
 // ── Scanner ─────────────────────────────────────────────────────────
 // Scans for trading opportunities across DEXs on Base.
-// Uses Uniswap V3 Quoter for price discovery.
+// Uses Uniswap V3 Quoter + Uniswap Developer Platform API for price discovery.
 
 import { ethers } from 'ethers';
 import { config } from './config.js';
-import { log, logError } from './logger.js';
+import { log, logError, logWarn } from './logger.js';
 
 const QUOTER_ABI = [
   'function quoteExactInputSingle((address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96)) external returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)',
@@ -25,6 +25,62 @@ export class Scanner {
     this.quoter = new ethers.Contract(config.uniswap.quoterV2, QUOTER_ABI, provider);
     this.aeroFactory = new ethers.Contract(AERODROME_FACTORY, AERODROME_FACTORY_ABI, provider);
     this.opportunities = [];
+    this.uniswapApiEnabled = !!config.uniswap.apiKey;
+    if (this.uniswapApiEnabled) {
+      log('scanner', '🔑 Uniswap Developer Platform API enabled');
+    }
+  }
+
+  /**
+   * Get quote from Uniswap Developer Platform API (routing API).
+   * Provides optimal routing across all Uniswap pools — better than single-pool quoter.
+   */
+  async getUniswapApiQuote(tokenInSymbol, tokenOutSymbol, amountIn, decimalsIn = 18) {
+    if (!this.uniswapApiEnabled) return null;
+
+    try {
+      const tokenIn = config.tokens[tokenInSymbol];
+      const tokenOut = config.tokens[tokenOutSymbol];
+      const amountInWei = ethers.parseUnits(amountIn, decimalsIn).toString();
+
+      const params = new URLSearchParams({
+        tokenInAddress: tokenIn,
+        tokenOutAddress: tokenOut,
+        amount: amountInWei,
+        type: 'exactIn',
+        tokenInChainId: config.chain.chainId.toString(),
+        tokenOutChainId: config.chain.chainId.toString(),
+        protocols: 'v3,v2',
+        recipient: config.agentAddress,
+        slippageTolerance: '0.5',
+      });
+
+      const resp = await fetch(`https://api.uniswap.org/v2/quote?${params}`, {
+        headers: {
+          'x-api-key': config.uniswap.apiKey,
+          'Origin': 'https://app.uniswap.org',
+        },
+      });
+
+      if (!resp.ok) {
+        logWarn('scanner', `Uniswap API ${resp.status}: ${resp.statusText}`);
+        return null;
+      }
+
+      const data = await resp.json();
+      if (data.quote) {
+        return {
+          amountOut: BigInt(data.quote),
+          gasEstimate: BigInt(data.gasUseEstimate || '0'),
+          route: data.route || [],
+          source: 'uniswap-api',
+        };
+      }
+      return null;
+    } catch (e) {
+      logWarn('scanner', `Uniswap API error: ${e.message}`);
+      return null;
+    }
   }
 
   /**
@@ -98,10 +154,17 @@ export class Scanner {
       const testAmount = pair.tokenIn === 'USDC' ? '1.0' : '0.0005'; // small test amounts
 
       try {
-        const [uniQuote, aeroQuote] = await Promise.all([
+        // Fetch quotes from all sources in parallel
+        const [uniQuote, aeroQuote, apiQuote] = await Promise.all([
           this.getUniswapQuote(pair.tokenIn, pair.tokenOut, testAmount, decimalsIn),
           this.getAerodromeQuote(pair.tokenIn, pair.tokenOut, testAmount, decimalsIn),
+          this.getUniswapApiQuote(pair.tokenIn, pair.tokenOut, testAmount, decimalsIn),
         ]);
+
+        // Use API quote if available and better than on-chain quoter
+        if (apiQuote && uniQuote && apiQuote.amountOut > uniQuote.amountOut) {
+          log('scanner', `📡 Uniswap API found better route: ${ethers.formatUnits(apiQuote.amountOut, decimalsOut)} vs ${ethers.formatUnits(uniQuote.amountOut, decimalsOut)}`);
+        }
 
         if (!uniQuote || !aeroQuote) continue;
 

@@ -32,34 +32,47 @@ The closed loop: **Trade profits → fund LLM inference → smarter trades → m
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                      SYNTHESIS AGENT LOOP                        │
-│                                                                  │
-│  ┌─────────┐    ┌───────────┐    ┌──────────────┐               │
-│  │ Identity │───▶│  Scanner  │───▶│  Orchestrator│               │
-│  │ ERC-8004 │    │ Uni + Aero│    │  ERC-8183    │               │
-│  └─────────┘    └─────┬─────┘    └──────┬───────┘               │
-│                       │                  │                        │
-│                       ▼                  ▼                        │
-│              ┌────────────────┐  ┌──────────────┐               │
-│              │   LLM Gateway  │  │   Feedback   │               │
-│              │ 6-provider     │  │   Loop       │               │
-│              │ cascade        │  │              │               │
-│              └────────┬───────┘  └──────┬───────┘               │
-│                       │                  │                        │
-│                       ▼                  ▼                        │
-│              ┌────────────────┐  ┌──────────────┐               │
-│              │   Executor     │  │   Reporter   │               │
-│              │ Scoped limits  │──▶│ On-chain log │               │
-│              │ $2/tx $20/day  │  │              │               │
-│              └────────────────┘  └──────────────┘               │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────┐        │
-│  │               DEPENDENCY LAYER                       │        │
-│  │  @darksol/terminal  •  Facilitator  •  Agent Signer  │        │
-│  │  @darksol/bankr-router  •  x402 Client               │        │
-│  └─────────────────────────────────────────────────────┘        │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       SYNTHESIS AGENT LOOP                            │
+│                                                                      │
+│  ┌─────────┐    ┌───────────────┐    ┌──────────────┐               │
+│  │ Identity │───▶│    Scanner    │───▶│  Orchestrator│               │
+│  │ ERC-8004 │    │ Uni V3 + API │    │  ERC-8183    │               │
+│  └─────────┘    │ + Aerodrome   │    │  Job Escrow  │               │
+│                 └───────┬───────┘    └──────┬───────┘               │
+│                         │                    │                        │
+│                         ▼                    ▼                        │
+│                ┌────────────────┐    ┌──────────────┐               │
+│                │   LLM Gateway  │    │   Feedback   │               │
+│                │  6-provider    │    │    Loop      │               │
+│                │  cascade       │    │  Adaptive    │               │
+│                └────────┬───────┘    └──────┬───────┘               │
+│                         │                    │                        │
+│                         ▼                    ▼                        │
+│  ┌───────────────────────────────────────────────────────┐          │
+│  │              ON-CHAIN GUARDRAILS                       │          │
+│  │  ┌──────────────────┐    ┌────────────────────────┐   │          │
+│  │  │ SpendingPolicy   │    │     Executor           │   │          │
+│  │  │ wouldApprove() → │───▶│ requestApproval() →    │   │          │
+│  │  │ $2/tx, $20/day   │    │ Uniswap SwapRouter     │   │          │
+│  │  │ Freeze / Targets │    │                        │   │          │
+│  │  └──────────────────┘    └───────────┬────────────┘   │          │
+│  └──────────────────────────────────────┼────────────────┘          │
+│                                         │                            │
+│                         ┌───────────────┼───────────────┐           │
+│                         ▼               ▼               ▼           │
+│                 ┌──────────────┐ ┌────────────┐ ┌──────────────┐   │
+│                 │  Liquidity   │ │   Cards    │ │   Reporter   │   │
+│                 │  Manager     │ │  Prepaid   │ │  On-chain    │   │
+│                 │  Uni V3 LP   │ │  USDC→Visa │ │  Receipts    │   │
+│                 └──────────────┘ └────────────┘ └──────────────┘   │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                    DEPENDENCY LAYER                           │    │
+│  │  @darksol/terminal  •  Facilitator  •  Agent Signer          │    │
+│  │  @darksol/bankr-router  •  x402 Client  •  Uniswap API      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
@@ -86,10 +99,13 @@ node scripts/demo-erc8183.js
 | Module | File | Purpose |
 |--------|------|---------|
 | **Identity** | `src/identity.js` | ERC-8004 verification, receipt logging, balance tracking |
-| **Scanner** | `src/scanner.js` | Cross-DEX price comparison (Uniswap V3 QuoterV2 + Aerodrome) |
+| **Scanner** | `src/scanner.js` | Cross-DEX price comparison (Uniswap V3 QuoterV2 + Aerodrome + Uniswap API) |
 | **LLM Gateway** | `src/llm.js` | 6-provider cascade with automatic failover |
 | **Orchestrator** | `src/orchestrator.js` | ERC-8183 job posting, bidding, fulfillment, price discovery |
-| **Executor** | `src/executor.js` | Trade execution with per-TX and daily spending caps |
+| **Executor** | `src/executor.js` | Trade execution with on-chain AgentSpendingPolicy checks |
+| **Spending Policy** | `contracts/AgentSpendingPolicy.sol` | On-chain guardrails — human sets limits, agent cannot raise them |
+| **Liquidity** | `src/liquidity.js` | Uniswap V3 concentrated liquidity position management |
+| **Cards** | `src/cards.js` | Prepaid card ordering — convert USDC profits to real-world spending |
 | **Feedback** | `src/feedback.js` | Validates outsourced work against trade history, adapts thresholds |
 | **Reporter** | `src/reporter.js` | Formatted activity reports per cycle |
 | **Config** | `src/config.js` | Centralized configuration, key loading |
@@ -129,11 +145,13 @@ The agent outsources skills it needs to other agents via on-chain job contracts:
 
 ### 🔍 Cross-DEX Arbitrage Scanner
 
-Real-time price comparison:
-- **Uniswap V3** — QuoterV2 exact output quotes (fee tiers 500/3000/10000)
+Real-time price comparison from three sources:
+- **Uniswap V3 QuoterV2** — On-chain exact output quotes (fee tiers 500/3000/10000)
+- **Uniswap Developer Platform API** — Optimal routing across all Uniswap pools (v2 + v3)
 - **Aerodrome** — Stable and volatile pool quotes
 - Configurable pairs: WETH/USDC, USDC/WETH, WETH/DAI
 - Minimum spread threshold: 40bps (adaptive via feedback loop)
+- Uses best quote across all sources for execution
 
 ### 🔄 Feedback Loop
 
@@ -143,13 +161,33 @@ The agent doesn't blindly trust outsourced evaluations:
 - If worse → rejects with on-chain reputation hit
 - Adaptive thresholds evolve with data
 
-### 💱 Scoped Spending Limits
+### 💱 On-Chain Spending Policy
 
-Built-in guardrails:
-- **Per-transaction cap**: $2 max per swap
-- **Daily spending limit**: $20/day max
-- **Cooldown**: 30s minimum between trades
+Smart contract guardrails — the human sets limits, the agent can't override them:
+
+- **AgentSpendingPolicy**: [`0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`](https://basescan.org/address/0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477)
+- **Per-transaction cap**: $2 USDC max per swap (on-chain enforced)
+- **Daily spending limit**: $20 USDC/day (on-chain 24h rolling window)
+- **Approved targets**: Only whitelisted DEX routers (Uniswap + Aerodrome)
+- **Emergency freeze**: Owner can zero all limits instantly
+- **Pre-flight check**: `wouldApprove()` view call before every trade
+- **On-chain record**: `requestApproval()` records every approved spend with events
 - **Confidence threshold**: Only executes when AI confidence ≥ 60%
+
+### 💧 Autonomous Liquidity Management
+
+Uniswap V3 concentrated liquidity positions:
+- Monitors existing positions for range status
+- AI-evaluated LP decisions via LLM cascade
+- Configurable tick range and fee tier selection
+- Scoped under same spending policy
+
+### 💳 Prepaid Cards (Trade → Spend)
+
+Convert USDC profits to real-world purchasing power:
+- DARKSOL Cards API integration — Visa/Mastercard, no KYC
+- Auto-evaluation: only orders when USDC balance exceeds reserve threshold
+- Closes the full loop: trade → earn USDC → buy prepaid card → spend in real world
 
 ## Configuration
 
@@ -162,17 +200,19 @@ Built-in guardrails:
 | `BANKR_API_KEY` | from `.keys/` | Bankr LLM Gateway key |
 | `UNISWAP_API_KEY` | from `.keys/` | Uniswap API key |
 | `SYNTHESIS_JOBS_ADDRESS` | `0xCB98...6617` | ERC-8183 contract |
+| `SPENDING_POLICY` | `0xA928...0477` | On-chain spending policy contract |
 
 ## On-Chain Artifacts
 
 | Artifact | Link |
 |----------|------|
 | ERC-8004 Identity | [BaseScan](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba) |
-| SynthesisJobs Contract | [BaseScan](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617) |
+| SynthesisJobs (ERC-8183) | [BaseScan](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617) |
+| AgentSpendingPolicy | [BaseScan](https://basescan.org/address/0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477) |
 | First Trade (ETH→USDC) | [BaseScan](https://basescan.org/tx/0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259) |
 | ERC-8183 Job #1 Complete | [BaseScan](https://basescan.org/tx/0x96d71378773a2d7fb8061bad6c7d768c5526152ce0d08feb26d67b8a984bc1c1) |
+| SpendingPolicy Deploy | [BaseScan](https://basescan.org/tx/0xaa0626bd3ac174eb009fdaa6d42ac4757d5ebf64638a096a4ab85be1177b3c0d) |
 | USDC→ETH Refuel | [BaseScan](https://basescan.org/tx/0xbe7f5b9866144927d76febcc723be328cc14c7257348ffee3bf3522766e677f0) |
-| Contract Deploy | [BaseScan](https://basescan.org/tx/0x31e5960b1841f6d368351cd36f9a02786e7ea4d9a8f3d5ddcc98798a4d52d44e) |
 
 ## Dependencies (Pre-existing DARKSOL Infrastructure)
 

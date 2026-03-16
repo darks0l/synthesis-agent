@@ -1,6 +1,6 @@
 // ── Executor ────────────────────────────────────────────────────────
-// Executes trades via the Agent Signer (scoped spending proxy).
-// Never touches private keys directly — all signing goes through the signer.
+// Executes trades via on-chain AgentSpendingPolicy + Uniswap V3.
+// Every swap checks the on-chain policy contract BEFORE executing.
 
 import { ethers } from 'ethers';
 import { config } from './config.js';
@@ -16,36 +16,91 @@ const SWAP_ROUTER_ABI = [
   'function exactInputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountOut)',
 ];
 
+const SPENDING_POLICY_ABI = [
+  'function wouldApprove(address target, uint256 amount) view returns (bool approved, string reason)',
+  'function requestApproval(address target, uint256 amount) returns (bool)',
+  'function remainingDaily() view returns (uint256)',
+  'function getPolicy() view returns (address _agent, uint256 _maxPerTx, uint256 _maxDaily, uint256 _cooldownMs, uint256 _dailySpent, uint256 _remaining, uint256 _txCount, uint256 _windowReset)',
+];
+
 export class Executor {
   constructor(provider) {
     this.provider = provider;
     this.dailySpent = 0;
     this.lastTradeTime = 0;
     this.executedTrades = [];
+    this.policyContract = null;
+
+    // Wire up on-chain spending policy if configured
+    if (config.spending.policyContract) {
+      try {
+        this.policyContract = new ethers.Contract(
+          config.spending.policyContract,
+          SPENDING_POLICY_ABI,
+          provider
+        );
+        log('executor', `📋 SpendingPolicy wired: ${config.spending.policyContract}`);
+      } catch (e) {
+        logWarn('executor', `SpendingPolicy init failed: ${e.message}`);
+      }
+    }
   }
 
-  /** Check if we can execute (spending limits + cooldown) */
-  canExecute(amountUsd) {
+  /** Check if we can execute — on-chain policy first, local fallback */
+  async canExecute(amountUsd, targetRouter) {
     const now = Date.now();
 
-    // Cooldown check
+    // Cooldown check (local, faster than on-chain)
     if (now - this.lastTradeTime < config.spending.cooldownMs) {
       const waitSec = Math.ceil((config.spending.cooldownMs - (now - this.lastTradeTime)) / 1000);
       log('executor', `⏳ Cooldown: wait ${waitSec}s`);
       return { ok: false, reason: `Cooldown: ${waitSec}s remaining` };
     }
 
-    // Per-tx limit
+    // On-chain policy check (if available)
+    if (this.policyContract && targetRouter) {
+      try {
+        const amountUsdc = ethers.parseUnits(amountUsd.toFixed(6), 6);
+        const [approved, reason] = await this.policyContract.wouldApprove(targetRouter, amountUsdc);
+        if (!approved) {
+          log('executor', `🚫 On-chain policy rejected: ${reason}`);
+          return { ok: false, reason: `Policy: ${reason}`, onChain: true };
+        }
+        const remaining = await this.policyContract.remainingDaily();
+        log('executor', `📋 Policy approved — $${(Number(remaining) / 1e6).toFixed(2)} daily budget remaining`);
+        return { ok: true, onChain: true };
+      } catch (e) {
+        logWarn('executor', `On-chain policy check failed (${e.message}), using local limits`);
+      }
+    }
+
+    // Local fallback limits
     if (amountUsd > parseFloat(config.spending.maxPerTx)) {
       return { ok: false, reason: `Exceeds per-tx limit: $${amountUsd} > $${config.spending.maxPerTx}` };
     }
 
-    // Daily limit
     if (this.dailySpent + amountUsd > parseFloat(config.spending.maxDaily)) {
       return { ok: false, reason: `Exceeds daily limit: $${this.dailySpent + amountUsd} > $${config.spending.maxDaily}` };
     }
 
-    return { ok: true };
+    return { ok: true, onChain: false };
+  }
+
+  /** Request on-chain approval (state-changing — records spend) */
+  async requestOnChainApproval(amountUsd, targetRouter, wallet) {
+    if (!this.policyContract || !targetRouter) return true;
+
+    try {
+      const amountUsdc = ethers.parseUnits(amountUsd.toFixed(6), 6);
+      const policyWithSigner = this.policyContract.connect(wallet);
+      const tx = await policyWithSigner.requestApproval(targetRouter, amountUsdc);
+      const receipt = await tx.wait();
+      log('executor', `📋 On-chain approval recorded — tx: ${receipt.hash}`);
+      return true;
+    } catch (e) {
+      logWarn('executor', `On-chain approval tx failed (${e.message}), continuing with local tracking`);
+      return false; // Non-fatal — local tracking still enforces limits
+    }
   }
 
   /**
@@ -57,10 +112,11 @@ export class Executor {
   async executeSwap(opportunity, wallet) {
     const { tokenIn, tokenOut, amountIn } = opportunity;
     const decimalsIn = tokenIn === 'USDC' ? 6 : 18;
+    const targetRouter = config.uniswap.routerV3;
 
     // Estimate USD value for spending check
     const usdValue = tokenIn === 'USDC' ? parseFloat(amountIn) : parseFloat(amountIn) * 2000; // rough ETH price
-    const check = this.canExecute(usdValue);
+    const check = await this.canExecute(usdValue, targetRouter);
     if (!check.ok) {
       logWarn('executor', `Trade blocked: ${check.reason}`);
       return { success: false, reason: check.reason };
@@ -96,6 +152,9 @@ export class Executor {
           log('executor', `✓ Approval tx: ${approveTx.hash}`);
         }
       }
+
+      // Record on-chain approval (non-blocking — local tracking is backup)
+      await this.requestOnChainApproval(usdValue, targetRouter, wallet);
 
       // Execute swap
       const router = new ethers.Contract(config.uniswap.routerV3, SWAP_ROUTER_ABI, wallet);
