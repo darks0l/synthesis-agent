@@ -164,7 +164,9 @@ export class Executor {
         fee: opportunity.fee || 3000,
         recipient: config.agentAddress,
         amountIn: amountInWei,
-        amountOutMinimum: 1n, // Minimal slippage protection — accept any nonzero output
+        amountOutMinimum: opportunity.expectedOut
+          ? BigInt(Math.floor(Number(opportunity.expectedOut) * 0.95)) // 5% slippage tolerance
+          : 1n, // fallback: accept any nonzero output
         sqrtPriceLimitX96: 0n,
       };
 

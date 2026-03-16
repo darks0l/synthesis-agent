@@ -24,8 +24,9 @@ Most "AI agents" are chatbots with a wallet. This one runs a business.
 2. **Routes** trade evaluations through a multi-provider LLM cascade (Bankr → OpenAI → Anthropic → OpenRouter → Ollama → hardcoded heuristic)
 3. **Executes** trades within scoped spending limits
 4. **Outsources** skills it needs to other agents via ERC-8183 on-chain job contracts
-5. **Learns** from every trade — validates outsourced work against its own history, adopts better heuristics
-6. **Reports** every action with on-chain receipts tied to its ERC-8004 identity
+5. **Communicates** with other agents via AgentMail — receives bids, sends results, publishes service listings
+6. **Learns** from every trade — validates outsourced work against its own history, adopts better heuristics
+7. **Reports** every action with on-chain receipts tied to its ERC-8004 identity
 
 The closed loop: **Trade profits → fund LLM inference → smarter trades → more profit → afford better agent help → repeat.**
 
@@ -61,11 +62,11 @@ The closed loop: **Trade profits → fund LLM inference → smarter trades → m
 │                                         │                            │
 │                         ┌───────────────┼───────────────┐           │
 │                         ▼               ▼               ▼           │
-│                 ┌──────────────┐ ┌────────────┐ ┌──────────────┐   │
-│                 │  Liquidity   │ │   Cards    │ │   Reporter   │   │
-│                 │  Manager     │ │  Prepaid   │ │  On-chain    │   │
-│                 │  Uni V3 LP   │ │  USDC→Visa │ │  Receipts    │   │
-│                 └──────────────┘ └────────────┘ └──────────────┘   │
+│         ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
+│         │Liquidity │ │AgentMail │ │  Cards   │ │ Reporter │       │
+│         │ Manager  │ │ Job bids │ │ Prepaid  │ │ On-chain │       │
+│         │Uni V3 LP │ │ Listings │ │USDC→Visa │ │ Receipts │       │
+│         └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
 │                                                                      │
 │  ┌─────────────────────────────────────────────────────────────┐    │
 │  │                    DEPENDENCY LAYER                           │    │
@@ -105,6 +106,7 @@ node scripts/demo-erc8183.js
 | **Executor** | `src/executor.js` | Trade execution with on-chain AgentSpendingPolicy checks |
 | **Spending Policy** | `contracts/AgentSpendingPolicy.sol` | On-chain guardrails — human sets limits, agent cannot raise them |
 | **Liquidity** | `src/liquidity.js` | Uniswap V3 concentrated liquidity position management |
+| **Mail** | `src/mail.js` | AgentMail integration — inter-agent communication for job bids/results |
 | **Cards** | `src/cards.js` | Prepaid card ordering — convert USDC profits to real-world spending |
 | **Feedback** | `src/feedback.js` | Validates outsourced work against trade history, adapts thresholds |
 | **Reporter** | `src/reporter.js` | Formatted activity reports per cycle |
@@ -174,6 +176,18 @@ Smart contract guardrails — the human sets limits, the agent can't override th
 - **On-chain record**: `requestApproval()` records every approved spend with events
 - **Confidence threshold**: Only executes when AI confidence ≥ 60%
 
+### 📬 AgentMail (Inter-Agent Communication)
+
+Off-chain coordination layer for the on-chain job market:
+
+- **Receive job bids** — other agents discover your ERC-8183 jobs and bid via mail
+- **Send job results** — deliver work to clients with structured responses
+- **Service listing** — publish capabilities ("TradeEval for $0.05") for agent discovery
+- **Auto-respond** — service queries answered automatically with your listing
+- **Structured protocol** — JSON message types: `job_bid`, `job_result`, `service_query`
+
+The combination: **on-chain escrow (ERC-8183)** + **off-chain coordination (AgentMail)** + **payment (USDC)**. Full agent economy stack.
+
 ### 💧 Autonomous Liquidity Management
 
 Uniswap V3 concentrated liquidity positions:
@@ -199,6 +213,8 @@ Convert USDC profits to real-world purchasing power:
 | `SCAN_INTERVAL` | `60000` | Scan interval (ms) |
 | `BANKR_API_KEY` | from `.keys/` | Bankr LLM Gateway key |
 | `UNISWAP_API_KEY` | from `.keys/` | Uniswap API key |
+| `AGENTMAIL_API_KEY` | from `.keys/` | AgentMail API key |
+| `AGENTMAIL_INBOX` | auto-created | AgentMail inbox address |
 | `SYNTHESIS_JOBS_ADDRESS` | `0xCB98...6617` | ERC-8183 contract |
 | `SPENDING_POLICY` | `0xA928...0477` | On-chain spending policy contract |
 

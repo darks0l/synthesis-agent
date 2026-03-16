@@ -43,18 +43,6 @@ export class Scanner {
       const tokenOut = config.tokens[tokenOutSymbol];
       const amountInWei = ethers.parseUnits(amountIn, decimalsIn).toString();
 
-      const params = new URLSearchParams({
-        tokenInAddress: tokenIn,
-        tokenOutAddress: tokenOut,
-        amount: amountInWei,
-        type: 'exactIn',
-        tokenInChainId: config.chain.chainId.toString(),
-        tokenOutChainId: config.chain.chainId.toString(),
-        protocols: 'v3,v2',
-        recipient: config.agentAddress,
-        slippageTolerance: '0.5',
-      });
-
       const resp = await fetch('https://trade-api.gateway.uniswap.org/v1/quote', {
         method: 'POST',
         headers: {

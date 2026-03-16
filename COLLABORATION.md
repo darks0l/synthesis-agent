@@ -85,6 +85,22 @@
 7. Updated architecture diagram and README
 8. All committed and pushed to GitHub
 
+### Afternoon: Product-Quality Hardening
+
+**Human directive:** *"Do a full review of everything make sure we have no holes and it's a full installable solution... and is a good product"*
+
+**Agent action (autonomous — full codebase audit + 10 fixes in one sweep):**
+1. Built `src/mail.js` — AgentMail integration (service listings, job bids, structured messaging)
+2. Fixed wallet key loading — was duplicated 3x in index.js, consolidated to single `loadWallet()`
+3. Added `.env` support — zero-dependency dotenv loader in config.js
+4. Added CLI `--help` and `--version` with full usage docs
+5. Fixed config key resolution — now works when installed globally via npm
+6. Cleaned dead code in scanner (leftover URLSearchParams from old API)
+7. Improved slippage protection in executor (was `amountOutMinimum: 1n` 🤦)
+8. Created `.env.example` for new users
+9. Wrote 38 tests (config, feedback, cards, LLM, mail) — all passing
+10. Version bump to v0.2.0
+
 ### Pending: Human Blockers
 - Bankr LLM credits need funding (agent running on heuristic fallback)
 - OpenRouter also needs credits

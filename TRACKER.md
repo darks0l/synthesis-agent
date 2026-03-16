@@ -31,22 +31,28 @@
 - [x] Added prepaid card module (DARKSOL Cards API integration)
 - [x] Deployed AgentSpendingPolicy contract — `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`
 - [x] Swapped USDC→ETH for gas (2x refuels)
-- [ ] Wire spending policy into executor (on-chain approval before swap)
-- [ ] Run arb scanner live → keep generating on-chain activity
+- [x] Wire spending policy into executor (on-chain wouldApprove + requestApproval)
+- [x] Add Uniswap Developer Platform API integration (3-source scanner)
+- [x] Built LP module (liquidity.js) — Uniswap V3 concentrated liquidity
+- [x] Post first ERC-8183 job on-chain (Job #1 full lifecycle complete)
+- [x] Start submission README + architecture diagram (10KB README done)
+- [x] COLLABORATION.md — human-agent decision log for submission
+- [x] Scanner restarted with all integrations live
+- [ ] Run arb scanner live → keep generating on-chain activity (⚠ low ETH: 0.00011)
 
-### Day 3-4 (March 17-18) — Integration
+### Day 3-4 (March 17-18) — Integration & Demo
+- [ ] Get Bankr LLM credits funded (blocker — running heuristic only)
+- [ ] ETH top-up for continued trading
 - [ ] Wire agent signer for autonomous execution
-- [ ] Add Uniswap Developer Platform API integration
 - [ ] Deploy to Status Network Sepolia (gasless $50 prize)
-- [ ] Post first ERC-8183 job on-chain (self-fulfill demo)
-- [ ] Start submission README + architecture diagram
+- [ ] Record demo video (terminal in action)
+- [ ] Run autonomous agent loop live end-to-end with LLM
 
 ### Day 5-6 (March 19-20) — Polish
-- [ ] Compile conversation log from session history
-- [ ] Record demo video (terminal in action)
-- [ ] Run autonomous agent loop live end-to-end
 - [ ] Write submission narrative
-- [ ] Open source terminal + facilitator repos (if not already)
+- [ ] Run full autonomous loop live (24h+ with LLM)
+- [ ] Open source terminal + facilitator repos (already public)
+- [ ] Architecture diagram (visual, for submission)
 
 ### Day 7 (March 21-22) — Submit
 - [ ] Final submission on Devfolio

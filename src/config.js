@@ -1,20 +1,51 @@
 // ── Config ──────────────────────────────────────────────────────────
 // Central configuration for the Synthesis Agent.
 // Environment variables override defaults.
+// Supports .env file in project root for portable configuration.
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const keysDir = join(__dirname, '..', '..', '.keys');
+const projectRoot = resolve(__dirname, '..');
+
+// ── Load .env if present ──
+function loadDotEnv() {
+  const envPath = join(projectRoot, '.env');
+  if (!existsSync(envPath)) return;
+  try {
+    const lines = readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx < 1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+      if (!process.env[key]) process.env[key] = val; // env vars take priority
+    }
+  } catch {}
+}
+loadDotEnv();
+
+// ── Key resolution: check env, then .keys/ relative to project, then home ──
+const keysDir = process.env.KEYS_DIR
+  || join(projectRoot, '..', '.keys')   // workspace/.keys (dev)
+  ;
 
 function readKey(filename) {
-  try {
-    return readFileSync(join(keysDir, filename), 'utf8').trim();
-  } catch {
-    return null;
+  // 1. Check project-relative .keys
+  const paths = [
+    join(keysDir, filename),
+    join(projectRoot, '.keys', filename),  // project-local .keys
+  ];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) return readFileSync(p, 'utf8').trim();
+    } catch {}
   }
+  return null;
 }
 
 export const config = {
@@ -110,6 +141,12 @@ export const config = {
     minUsdcForCard: 25,    // Min USDC balance before considering card order
     reserveUsdc: 5,        // Keep this much USDC for trading
     reserveEth: 0.002,     // Keep this much ETH for gas
+  },
+
+  // ── AgentMail (inter-agent communication) ──
+  mail: {
+    apiKey: process.env.AGENTMAIL_API_KEY || readKey('agentmail-api-key.txt'),
+    inbox: process.env.AGENTMAIL_INBOX || null, // auto-created if not set
   },
 
   // ── Flags ──
