@@ -30,6 +30,7 @@ import { Executor } from './executor.js';
 import { Reporter } from './reporter.js';
 import { Orchestrator, SkillType } from './orchestrator.js';
 import { FeedbackLoop } from './feedback.js';
+import { LiquidityManager } from './liquidity.js';
 
 // ── Banner ──
 function banner() {
@@ -80,6 +81,24 @@ async function main() {
 
   // Check orchestrator
   log('main', `🔗 ERC-8183 Orchestrator: ${orchestrator.deployed ? '✓ ' + config.orchestrator.contractAddress : '✗ not deployed (local-only mode)'}`);
+
+  // Initialize liquidity manager (requires wallet)
+  let liquidityMgr = null;
+  try {
+    const { readFileSync } = await import('fs');
+    const { join, dirname } = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const raw = readFileSync(join(__dirname, '..', '..', '.keys', 'base-deployer.txt'), 'utf8');
+    const match = raw.match(/DEPLOYER_KEY=(0x[a-fA-F0-9]+)/);
+    const pk = match ? match[1] : raw.trim();
+    const walletInit = new ethers.Wallet(pk, provider);
+    liquidityMgr = new LiquidityManager(walletInit);
+    await liquidityMgr.loadExistingPositions();
+    log('main', `💧 Liquidity Manager: ✓ initialized (${liquidityMgr.positions.length} existing position(s))`);
+  } catch (err) {
+    log('main', `💧 Liquidity Manager: ✗ ${err.message}`);
+  }
 
   // ── Agent Loop ──
   async function cycle() {
@@ -185,7 +204,43 @@ async function main() {
         }
       }
 
-      // 6. Report
+      // 9. Liquidity management
+      if (liquidityMgr) {
+        try {
+          const lpStatus = await liquidityMgr.monitorPositions();
+          if (lpStatus && lpStatus.length > 0) {
+            for (const pos of lpStatus) {
+              if (!pos.inRange && wallet) {
+                // Ask LLM whether to rebalance
+                const rebalanceQuery = {
+                  pair: 'WETH/USDC',
+                  type: 'rebalance_decision',
+                  currentTick: pos.currentTick,
+                  tickLower: pos.tickLower,
+                  tickUpper: pos.tickUpper,
+                  ethPrice: pos.ethPrice,
+                };
+                log('main', `🧠 LP position ${pos.tokenId} out of range — evaluating rebalance...`);
+                const rebalanceDecision = await llm.evaluateOpportunity(rebalanceQuery);
+                if (rebalanceDecision.execute && rebalanceDecision.confidence >= 55) {
+                  log('main', `🔄 Rebalancing position ${pos.tokenId}...`);
+                  await liquidityMgr.rebalance(pos.tokenId, '0.001');
+                } else {
+                  log('main', `⏭️ Skipping rebalance (confidence ${rebalanceDecision.confidence}%)`);
+                }
+              }
+            }
+          }
+          const lpSummary = liquidityMgr.getSummary();
+          if (lpSummary.activePositions > 0) {
+            log('main', `💧 LP: ${lpSummary.activePositions} position(s), fees: ${lpSummary.feesCollected.weth} WETH + ${lpSummary.feesCollected.usdc} USDC`);
+          }
+        } catch (err) {
+          logError('main', `LP monitor error: ${err.message}`);
+        }
+      }
+
+      // 10. Report
       const report = reporter.cycleReport(opportunities, decision, tradeResult);
       console.log('\n' + reporter.formatReport(report) + '\n');
 
@@ -195,6 +250,25 @@ async function main() {
 
     } catch (err) {
       logError('main', `Cycle error: ${err.message}`);
+    }
+  }
+
+  // Mint initial LP position if requested
+  if (process.argv.includes('--mint-lp') && liquidityMgr) {
+    const lpAmount = process.argv[process.argv.indexOf('--mint-lp') + 1] || '0.001';
+    log('main', `🏗️ Minting initial LP position with ${lpAmount} ETH...`);
+    try {
+      const result = await liquidityMgr.mintPosition(lpAmount, 3000);
+      log('main', `✅ LP position minted! TokenId: ${result.tokenId || 'pending'} | TX: ${result.txHash}`);
+      identity.recordReceipt({
+        type: 'lp_mint',
+        tokenId: result.tokenId,
+        txHash: result.txHash,
+        tickLower: result.tickLower,
+        tickUpper: result.tickUpper,
+      });
+    } catch (err) {
+      logError('main', `LP mint failed: ${err.message}`);
     }
   }
 
@@ -214,6 +288,11 @@ async function main() {
     console.log(`   Orchestrator spent: $${orchStats.totalSpent} USDC`);
     console.log(`   Feedback: ${fbStats.totalTrades} trades logged, ${fbStats.improvementsAdopted} improvements adopted`);
     console.log(`   Adaptive threshold: ${fbStats.currentMinSpreadBps}bps min spread`);
+    if (liquidityMgr) {
+      const lpSummary = liquidityMgr.getSummary();
+      console.log(`   LP positions: ${lpSummary.activePositions} active, ${lpSummary.totalMinted} minted, ${lpSummary.rebalances} rebalances`);
+      console.log(`   LP fees: ${lpSummary.feesCollected.weth} WETH + ${lpSummary.feesCollected.usdc} USDC`);
+    }
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);
   }
