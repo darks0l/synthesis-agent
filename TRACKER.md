@@ -26,8 +26,15 @@
 - [x] Swap USDC→ETH for gas
 - [x] Bankr Router v1.2.0 published (retry chain, timeouts, health check)
 
+### Day 2 cont. (March 16) — Scaling Up
+- [x] Ran scanner overnight — 761 cycles, 13 trades, $13 spent
+- [x] Added prepaid card module (DARKSOL Cards API integration)
+- [x] Deployed AgentSpendingPolicy contract — `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`
+- [x] Swapped USDC→ETH for gas (2x refuels)
+- [ ] Wire spending policy into executor (on-chain approval before swap)
+- [ ] Run arb scanner live → keep generating on-chain activity
+
 ### Day 3-4 (March 17-18) — Integration
-- [ ] Run arb scanner live → generate on-chain activity
 - [ ] Wire agent signer for autonomous execution
 - [ ] Add Uniswap Developer Platform API integration
 - [ ] Deploy to Status Network Sepolia (gasless $50 prize)
@@ -68,6 +75,8 @@
 - WETH Unwrap: `0x73faf8551f0e0b4b908bd5d4eeebb92df6f7f7f8cf485d79a3ab2defc11d4bb3`
 - Trade TX #1: `0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259`
 - Trade TX #2: `0x7b72228d7e195f0dd01e9f5fd6769076e306e726143ffe654f1299e5c17edfd1`
+- AgentSpendingPolicy: `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477` — [BaseScan](https://basescan.org/address/0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477)
+- USDC→ETH Refuel #2: `0x4167abf69ee0ea7a20c818a5b92af937c55fb3f2ef08d0b5da1bd69563d21de2`
 
 ## Daily Log
 ### March 15
@@ -86,3 +95,13 @@
 - Swapped 10 USDC → ETH for gas, unwrapped WETH
 - Published @darksol/bankr-router v1.2.0 (upstream retry, timeouts, health check)
 - Wallet: ~0.00474 ETH + 1.56 USDC
+
+### March 16
+- Scanner ran overnight: 761 cycles, 13 total trades, $13 daily spend
+- Added `src/cards.js` — prepaid card ordering via DARKSOL Cards API
+- Swapped 5 USDC → ETH (2x refuels to keep scanner running)
+- **Deployed AgentSpendingPolicy** to Base: `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`
+  - 2 USDC/tx limit, 20 USDC/day, 30s cooldown
+  - Approved targets: Uniswap SwapRouter02 + Aerodrome Router
+  - Human-controlled: owner sets limits, agent cannot raise them
+  - Emergency freeze function for instant kill

@@ -83,6 +83,7 @@ export const config = {
     maxPerTx: process.env.MAX_PER_TX || '2.0',       // max USDC per swap
     maxDaily: process.env.MAX_DAILY || '20.0',        // max USDC per day
     cooldownMs: 30_000,                                // min ms between trades
+    policyContract: process.env.SPENDING_POLICY || '0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477',
   },
 
   // ── Scan Settings ──
