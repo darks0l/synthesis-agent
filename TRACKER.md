@@ -18,15 +18,20 @@
 - [x] Verify dry run works
 - [x] Push to GitHub (public)
 - [x] Store Uniswap API key
-- [x] Execute first real on-chain swap (small ETH→USDC) — TX: 0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259
-- [ ] Wire Bankr LLM Gateway (get API key)
-- [ ] Deploy AgentSpendingPolicy contract on Base
+- [x] Execute first real on-chain swap — TX: 0x10dfa861...
+- [x] Wire Bankr LLM Gateway (enabled, needs credits — fallback chain active)
+- [x] Multi-provider LLM routing (Bankr→OpenAI→Anthropic→OpenRouter→Ollama→heuristic)
+- [x] Build ERC-8183 orchestrator + feedback loop
+- [x] Deploy SynthesisJobs contract on Base — `0xCB98F0e2bb429E4a05203C57750A97Db280e6617`
+- [x] Swap USDC→ETH for gas
+- [x] Bankr Router v1.2.0 published (retry chain, timeouts, health check)
 
 ### Day 3-4 (March 17-18) — Integration
 - [ ] Run arb scanner live → generate on-chain activity
 - [ ] Wire agent signer for autonomous execution
 - [ ] Add Uniswap Developer Platform API integration
 - [ ] Deploy to Status Network Sepolia (gasless $50 prize)
+- [ ] Post first ERC-8183 job on-chain (self-fulfill demo)
 - [ ] Start submission README + architecture diagram
 
 ### Day 5-6 (March 19-20) — Polish
@@ -57,8 +62,12 @@
 
 ## On-Chain Artifacts
 - ERC-8004 TX: https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba
-- Agent Address: 0x3e6e304421993D7E95a77982E11C93610DD4fFC5
-- Trade TXs: (pending)
+- Agent Address: `0x3e6e304421993D7E95a77982E11C93610DD4fFC5`
+- SynthesisJobs Contract: `0xCB98F0e2bb429E4a05203C57750A97Db280e6617` — [BaseScan](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617)
+- USDC→ETH Swap: `0xbe7f5b9866144927d76febcc723be328cc14c7257348ffee3bf3522766e677f0`
+- WETH Unwrap: `0x73faf8551f0e0b4b908bd5d4eeebb92df6f7f7f8cf485d79a3ab2defc11d4bb3`
+- Trade TX #1: `0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259`
+- Trade TX #2: `0x7b72228d7e195f0dd01e9f5fd6769076e306e726143ffe654f1299e5c17edfd1`
 
 ## Daily Log
 ### March 15
@@ -68,7 +77,12 @@
 - Dry run successful — scanner found 45bps WETH/USDC spread
 - Pushed to GitHub: https://github.com/darks0l/synthesis-agent
 - Received $10 ETH funding from Meta
-- Stored Uniswap API key
+- Stored Uniswap + Bankr API keys
 - Fixed key parsing, USDC balance fallback, smart LLM heuristic
-- **FIRST LIVE TRADE** — 0.0005 ETH → 1.05 USDC via Uniswap V3 (TX: 0x10dfa86...)
-- Agent running in continuous live mode — scanning every 60s, auto-trading
+- **FIRST LIVE TRADE** — 0.0005 ETH → 1.05 USDC (×10 trades, earned 11.56 USDC)
+- Built ERC-8183 orchestrator (job posting, self-fulfill, feedback loop)
+- Built multi-provider LLM routing (6 providers, auto-fallback)
+- **Deployed SynthesisJobs contract** to Base: `0xCB98F0e2bb429E4a05203C57750A97Db280e6617`
+- Swapped 10 USDC → ETH for gas, unwrapped WETH
+- Published @darksol/bankr-router v1.2.0 (upstream retry, timeouts, health check)
+- Wallet: ~0.00474 ETH + 1.56 USDC
