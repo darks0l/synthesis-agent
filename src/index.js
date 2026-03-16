@@ -220,8 +220,18 @@ async function main() {
 
   // Continuous loop
   log('main', `🔄 Continuous mode — scanning every ${config.scan.intervalMs / 1000}s`);
-  setInterval(cycle, config.scan.intervalMs);
+  setInterval(() => {
+    cycle().catch(err => logError('main', `Cycle error (unhandled): ${err.message}`));
+  }, config.scan.intervalMs);
 }
+
+// Global safety nets — never let unhandled errors kill the scanner
+process.on('unhandledRejection', (err) => {
+  logError('main', `Unhandled rejection: ${err?.message || err}`);
+});
+process.on('uncaughtException', (err) => {
+  logError('main', `Uncaught exception: ${err?.message || err}`);
+});
 
 // ── Go ──
 main().catch(err => {
