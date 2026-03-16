@@ -103,6 +103,14 @@ export const config = {
     selfFulfill: true, // Demo mode: agent fulfills its own jobs to show lifecycle
   },
 
+  // ── Cards (DARKSOL prepaid cards — convert USDC to real-world spending) ──
+  cards: {
+    apiUrl: process.env.CARDS_API || 'https://acp.darksol.net/cards',
+    minUsdcForCard: 25,    // Min USDC balance before considering card order
+    reserveUsdc: 5,        // Keep this much USDC for trading
+    reserveEth: 0.002,     // Keep this much ETH for gas
+  },
+
   // ── Flags ──
   dryRun: process.argv.includes('--dry-run'),
   verbose: process.argv.includes('--verbose') || process.argv.includes('-v'),

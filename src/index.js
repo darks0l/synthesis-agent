@@ -31,6 +31,7 @@ import { Reporter } from './reporter.js';
 import { Orchestrator, SkillType } from './orchestrator.js';
 import { FeedbackLoop } from './feedback.js';
 import { LiquidityManager } from './liquidity.js';
+import { CardManager } from './cards.js';
 
 // ── Banner ──
 function banner() {
@@ -38,7 +39,7 @@ function banner() {
 ╔═══════════════════════════════════════════════════╗
 ║     🌑 SYNTHESIS AGENT — DARKSOL                 ║
 ║     Autonomous Agent Economy Orchestrator         ║
-║     ERC-8004 Identity • LLM Routing • On-Chain   ║
+║     Identity • LLM • Trading • LP • Cards         ║
 ╚═══════════════════════════════════════════════════╝
   `);
   console.log(`Mode: ${config.dryRun ? '🏜️ DRY RUN' : '🔴 LIVE'}`);
@@ -81,6 +82,11 @@ async function main() {
 
   // Check orchestrator
   log('main', `🔗 ERC-8183 Orchestrator: ${orchestrator.deployed ? '✓ ' + config.orchestrator.contractAddress : '✗ not deployed (local-only mode)'}`);
+
+  // Initialize cards manager
+  const cards = new CardManager();
+  const cardsHealthy = await cards.healthCheck();
+  log('main', `💳 Cards API: ${cardsHealthy ? '✓ reachable' : '✗ offline'} (${cards.getStats().apiEndpoint})`);
 
   // Initialize liquidity manager (requires wallet)
   let liquidityMgr = null;
@@ -240,7 +246,41 @@ async function main() {
         }
       }
 
-      // 10. Report
+      // 10. Card purchase evaluation (convert profits → real-world spending)
+      try {
+        const cardBalances = await identity.getBalances();
+        const cardEval = cards.shouldOrderCard(
+          parseFloat(cardBalances.usdc),
+          parseFloat(cardBalances.eth)
+        );
+        if (cardEval.should) {
+          log('main', `💳 Card opportunity: ${cardEval.reason}`);
+          if (!config.dryRun) {
+            const orderResult = await cards.orderCard({
+              amount: cardEval.amount,
+              crypto: 'USDC',
+              network: 'base',
+            });
+            if (orderResult.success) {
+              log('main', `💳 Card ordered! $${cardEval.amount} — ID: ${orderResult.orderId || 'pending'}`);
+              identity.recordReceipt({
+                type: 'card_order',
+                amount: cardEval.amount,
+                orderId: orderResult.orderId,
+                status: 'ordered',
+              });
+            } else {
+              log('main', `💳 Card order failed: ${orderResult.error}`);
+            }
+          } else {
+            log('main', `💳 [DRY RUN] Would order $${cardEval.amount} card`);
+          }
+        }
+      } catch (err) {
+        logError('main', `Card evaluation error: ${err.message}`);
+      }
+
+      // 11. Report
       const report = reporter.cycleReport(opportunities, decision, tradeResult);
       console.log('\n' + reporter.formatReport(report) + '\n');
 
@@ -293,6 +333,8 @@ async function main() {
       console.log(`   LP positions: ${lpSummary.activePositions} active, ${lpSummary.totalMinted} minted, ${lpSummary.rebalances} rebalances`);
       console.log(`   LP fees: ${lpSummary.feesCollected.weth} WETH + ${lpSummary.feesCollected.usdc} USDC`);
     }
+    const cardStats = cards.getStats();
+    console.log(`   Cards: ${cardStats.orderCount} ordered, $${cardStats.totalOrdered} total`);
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);
   }
