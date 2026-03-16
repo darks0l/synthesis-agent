@@ -55,11 +55,21 @@ export class Scanner {
         slippageTolerance: '0.5',
       });
 
-      const resp = await fetch(`https://api.uniswap.org/v2/quote?${params}`, {
+      const resp = await fetch('https://trade-api.gateway.uniswap.org/v1/quote', {
+        method: 'POST',
         headers: {
           'x-api-key': config.uniswap.apiKey,
-          'Origin': 'https://app.uniswap.org',
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          type: 'EXACT_INPUT',
+          tokenIn,
+          tokenOut,
+          amount: amountInWei,
+          chainId: config.chain.chainId,
+          swapper: config.agentAddress,
+          protocols: ['V3', 'V2'],
+        }),
       });
 
       if (!resp.ok) {
@@ -68,11 +78,11 @@ export class Scanner {
       }
 
       const data = await resp.json();
-      if (data.quote) {
+      if (data.quote && data.quote.output) {
         return {
-          amountOut: BigInt(data.quote),
-          gasEstimate: BigInt(data.gasUseEstimate || '0'),
-          route: data.route || [],
+          amountOut: BigInt(data.quote.output.amount),
+          gasEstimate: BigInt(data.quote.gasUseEstimate || '0'),
+          route: data.routing || 'CLASSIC',
           source: 'uniswap-api',
         };
       }
