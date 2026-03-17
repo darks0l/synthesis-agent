@@ -95,7 +95,7 @@ export const config = {
     ollamaModel: process.env.OLLAMA_MODEL || 'qwen3.5:latest',
     // Model preferences per provider
     models: {
-      bankr: 'meta-llama/llama-3.3-70b-instruct',
+      bankr: 'gemini-3-flash',
       openai: 'gpt-4o-mini',
       anthropic: 'claude-sonnet-4-20250514',
       openrouter: 'meta-llama/llama-3.3-70b-instruct',
