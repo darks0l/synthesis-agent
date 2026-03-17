@@ -247,6 +247,18 @@ Convert USDC profits to real-world purchasing power:
 | SpendingPolicy Deploy | [BaseScan](https://basescan.org/tx/0xaa0626bd3ac174eb009fdaa6d42ac4757d5ebf64638a096a4ab85be1177b3c0d) |
 | USDC→ETH Refuel | [BaseScan](https://basescan.org/tx/0xbe7f5b9866144927d76febcc723be328cc14c7257348ffee3bf3522766e677f0) |
 
+### Status Network Sepolia (Gasless Deployment)
+
+All contracts deployed with **zero gas fees** on Status Network's gasless L2:
+
+| Artifact | Link |
+|----------|------|
+| SynthesisIdentity | [Status Explorer](https://sepoliascan.status.network/address/0x7Fb22E58cD1A6567CfF129d880Cc8db89190974A) |
+| AgentSpendingPolicy | [Status Explorer](https://sepoliascan.status.network/address/0xbbe1443E24587C7d38F9Da3eF8D809cCeF9AfCb3) |
+| SynthesisJobs (ERC-8183) | [Status Explorer](https://sepoliascan.status.network/address/0x95C7CA9eA98C97FFB82764e63e0d19FcCFD42956) |
+
+> Note: Linea zkEVM requires `london` EVM target — contracts compiled with `--evm-version london` for opcode compatibility.
+
 ## Dependencies (Pre-existing DARKSOL Infrastructure)
 
 | Package | npm | Purpose |
@@ -266,6 +278,7 @@ Convert USDC profits to real-world purchasing power:
 | Uniswap Agentic Finance | $2.5k / $1.5k / $1k | Cross-DEX scanner, Uniswap V3 LP management, Trading API |
 | AgentCash x402 | $1k / $500 / $250 | x402 facilitator integration |
 | bond.credit | $1k / $500 | On-chain identity + reputation |
+| Status Network Gasless | $50 guaranteed | 3 contracts deployed gaslessly on Status Sepolia |
 | Open Track | $14.5k pool | Full stack showcase |
 | Status Network Gasless | $50 guaranteed | Sepolia deployment |
 

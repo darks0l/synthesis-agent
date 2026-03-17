@@ -3,3 +3,7 @@ logs/
 .keys/
 *.log
 .env
+*_london.abi
+*_london.bin
+contracts_*
+solc-input.json
