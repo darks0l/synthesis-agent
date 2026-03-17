@@ -100,6 +100,7 @@ node scripts/demo-erc8183.js
 
 | Module | File | Purpose |
 |--------|------|---------|
+| **TA Engine** | `src/ta.js` | 14 technical indicators + weighted signal aggregation (RSI, MACD, Bollinger, Stochastic, ATR, OBV, VWAP, EMA, Fibonacci, S/R, Divergence) |
 | **Identity** | `src/identity.js` | ERC-8004 verification, receipt logging, balance tracking |
 | **Scanner** | `src/scanner.js` | Cross-DEX price comparison (Uniswap V3 QuoterV2 + Aerodrome + Uniswap API) |
 | **LLM Gateway** | `src/llm.js` | 6-provider cascade with automatic failover |
@@ -280,7 +281,22 @@ All contracts deployed with **zero gas fees** on Status Network's gasless L2:
 | bond.credit | $1k / $500 | On-chain identity + reputation |
 | Status Network Gasless | $50 guaranteed | 3 contracts deployed gaslessly on Status Sepolia |
 | Open Track | $14.5k pool | Full stack showcase |
-| Status Network Gasless | $50 guaranteed | Sepolia deployment |
+
+## Exportable Skills
+
+Every module is a standalone skill other agents can import and use:
+
+| Skill | What |
+|-------|------|
+| [`synthesis-ta`](skills/ta/) | 14-indicator TA engine (RSI, MACD, Bollinger, Stochastic, ATR, OBV, VWAP, Fibonacci, S/R, Divergence) |
+| [`synthesis-arb-scanner`](skills/arb-scanner/) | Cross-DEX price discovery (3 sources in parallel) |
+| [`synthesis-spending-policy`](skills/spending-policy/) | On-chain spending guardrails |
+| [`synthesis-erc8183-jobs`](skills/erc8183-jobs/) | Agent-to-agent job escrow + reputation |
+| [`synthesis-feedback-loop`](skills/feedback-loop/) | Self-improving trade history + adaptive thresholds |
+| [`synthesis-llm-cascade`](skills/llm-cascade/) | 6-provider LLM failover |
+| [`synthesis-agent-mail`](skills/agent-mail/) | Inter-agent messaging |
+
+All skills are Bankr-compatible and can be outsourced via ERC-8183 contracts. See [`skills/README.md`](skills/README.md) for details.
 
 ## Human-Agent Collaboration
 

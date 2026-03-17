@@ -43,6 +43,7 @@ import { LiquidityManager } from './liquidity.js';
 import { CardManager } from './cards.js';
 import { MailManager } from './mail.js';
 import { VirtualsACP } from './virtuals.js';
+import { TAEngine } from './ta.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -142,7 +143,7 @@ function banner() {
 ╔═══════════════════════════════════════════════════╗
 ║     🌑 SYNTHESIS AGENT — DARKSOL  v${version.padEnd(14)}║
 ║     Autonomous Agent Economy Orchestrator         ║
-║   Identity • LLM • Trading • LP • ACP • Mail • Cards ║
+║  Identity • TA • LLM • Trading • LP • ACP • Mail • Cards ║
 ╚═══════════════════════════════════════════════════╝
   `);
   console.log(`Mode: ${config.dryRun ? '🏜️ DRY RUN' : '🔴 LIVE'}`);
@@ -211,6 +212,10 @@ async function main() {
     log('main', '🌐 Virtuals ACP v2: ✗ no wallet loaded');
   }
 
+  // Initialize TA engine
+  const ta = new TAEngine();
+  log('main', '📊 TA Engine: ✓ initialized (RSI, MACD, Bollinger, Stochastic, ATR, OBV, VWAP, Fibonacci, S/R, Divergence)');
+
   // Initialize liquidity manager (requires wallet)
   let liquidityMgr = null;
   if (wallet) {
@@ -277,6 +282,14 @@ async function main() {
           if (virtualsJob) {
             log('main', `🌐 Virtuals ACP job posted — cross-network evaluation`);
           }
+        }
+
+        // 4c. Run TA analysis to inform LLM decision
+        const taResult = await ta.analyze('ethereum');
+        if (taResult.signal !== 'insufficient_data') {
+          log('main', `📊 TA: ${taResult.signal.toUpperCase()} (${taResult.confidence}% confidence) → ${taResult.recommendation}`);
+          best.ta = taResult; // Attach TA context to opportunity for LLM
+          best.taContext = ta.formatForLLM(taResult);
         }
 
         // 5. Ask LLM to evaluate (or use outsourced result when available)
@@ -470,6 +483,8 @@ async function main() {
     console.log(`   Cards: ${cardStats.orderCount} ordered, $${cardStats.totalOrdered} total`);
     console.log(`   Mail: ${mailStats.received} received, ${mailStats.sent} sent`);
     console.log(`   Virtuals ACP: ${virtualsAcp.enabled ? `${virtualsAcp.stats.jobsPosted} posted, ${virtualsAcp.stats.agentsDiscovered} agents discovered` : 'disabled'}`);
+    const taSummary = ta.summary();
+    console.log(`   TA Engine: ${taSummary.runs} analyses (last: ${taSummary.lastSignal} ${taSummary.lastConfidence}%)`);
 
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);
