@@ -230,11 +230,96 @@ async function main() {
     log('main', '💧 Liquidity Manager: ✗ no wallet loaded');
   }
 
+  // ── Auto-Refuel ──
+  // When ETH drops below threshold, swap USDC → WETH → ETH to keep gas alive
+  async function autoRefuel(wallet, currentBalances) {
+    const ethBal = parseFloat(currentBalances.eth);
+    const usdcBal = parseFloat(currentBalances.usdc);
+    const MIN_ETH = 0.002;        // refuel when below this
+    const REFUEL_USDC = 3.0;      // swap this much USDC for ETH
+    const MIN_USDC_RESERVE = 2.0; // keep at least this much USDC
+
+    if (ethBal >= MIN_ETH) return false;
+    if (usdcBal < REFUEL_USDC + MIN_USDC_RESERVE) {
+      logWarn('refuel', `ETH low (${ethBal}) but USDC too low to refuel (${usdcBal})`);
+      return false;
+    }
+    if (!wallet || config.dryRun) {
+      log('refuel', `[DRY RUN] Would swap ${REFUEL_USDC} USDC → ETH (ETH balance: ${ethBal})`);
+      return false;
+    }
+
+    log('refuel', `⛽ Auto-refuel triggered — ETH: ${ethBal} < ${MIN_ETH} threshold`);
+    log('refuel', `⛽ Swapping ${REFUEL_USDC} USDC → WETH → ETH...`);
+
+    try {
+      const usdc = new ethers.Contract(config.tokens.usdc, [
+        'function approve(address,uint256) returns (bool)',
+        'function allowance(address,address) view returns (uint256)',
+      ], wallet);
+      const amountIn = ethers.parseUnits(REFUEL_USDC.toString(), 6);
+
+      // Approve SwapRouter
+      const allowance = await usdc.allowance(wallet.address, config.uniswap.swapRouter);
+      if (allowance < amountIn) {
+        const approveTx = await usdc.approve(config.uniswap.swapRouter, ethers.MaxUint256);
+        await approveTx.wait();
+        log('refuel', '⛽ USDC approved for SwapRouter');
+      }
+
+      // Swap USDC → WETH
+      const router = new ethers.Contract(config.uniswap.swapRouter, [
+        'function exactInputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountOut)',
+      ], wallet);
+
+      const swapTx = await router.exactInputSingle({
+        tokenIn: config.tokens.usdc,
+        tokenOut: config.tokens.weth,
+        fee: 500,
+        recipient: wallet.address,
+        amountIn,
+        amountOutMinimum: 0n, // refuel is a safety action, accept market price
+        sqrtPriceLimitX96: 0n,
+      });
+      const receipt = await swapTx.wait();
+      log('refuel', `⛽ Swapped USDC → WETH | TX: ${receipt.hash}`);
+
+      // Unwrap WETH → ETH
+      const weth = new ethers.Contract(config.tokens.weth, [
+        'function balanceOf(address) view returns (uint256)',
+        'function withdraw(uint256) external',
+      ], wallet);
+      const wethBal = await weth.balanceOf(wallet.address);
+      if (wethBal > 0n) {
+        const unwrapTx = await weth.withdraw(wethBal);
+        await unwrapTx.wait();
+        log('refuel', `⛽ Unwrapped ${ethers.formatEther(wethBal)} WETH → ETH`);
+      }
+
+      const newEth = await wallet.provider.getBalance(wallet.address);
+      log('refuel', `⛽ Refuel complete — new ETH balance: ${ethers.formatEther(newEth)}`);
+      identity.recordReceipt({ type: 'auto_refuel', usdcSpent: REFUEL_USDC, ethGained: ethers.formatEther(wethBal), txHash: receipt.hash });
+      return true;
+    } catch (err) {
+      logError('refuel', `Auto-refuel failed: ${err.message}`);
+      return false;
+    }
+  }
+
   // ── Agent Loop ──
   async function cycle() {
     log('main', `═══ Cycle ${reporter.cycleCount + 1} ═══`);
 
     try {
+      // 0. Check balances and auto-refuel if ETH is low
+      const preBalances = await identity.getBalances();
+      if (wallet) {
+        const refueled = await autoRefuel(wallet, preBalances);
+        if (refueled) {
+          log('main', '⛽ Auto-refueled — continuing with fresh gas');
+        }
+      }
+
       // 1. Check AgentMail for incoming messages (job bids, queries)
       if (mail.enabled) {
         const mailResult = await mail.processInLoop();

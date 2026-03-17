@@ -1,0 +1,67 @@
+{
+  "name": "Darksol",
+  "version": "0.2.0",
+  "description": "Autonomous agent economy stack — cross-DEX arbitrage, ERC-8183 job escrow, self-sustaining LLM inference, and concentrated liquidity management on Base.",
+  "operatorWallet": "0x3e6e304421993D7E95a77982E11C93610DD4fFC5",
+  "erc8004Identity": {
+    "tokenId": 31929,
+    "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    "chain": "base",
+    "txHash": "0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba",
+    "blockNumber": 43402924,
+    "custodyType": "self_custody",
+    "transferTxHash": "0x9dec443e20739bc320f0d546b4e2b458f4959c5d7245fcde2a73d85e9c530e45"
+  },
+  "supportedTools": [
+    "uniswap-v3-swap",
+    "uniswap-v3-lp",
+    "aerodrome-quote",
+    "erc8183-job-post",
+    "erc8183-job-fulfill",
+    "bankr-llm-gateway",
+    "agentmail-inbox",
+    "virtuals-acp-v2",
+    "technical-analysis",
+    "on-chain-spending-policy",
+    "x402-payment",
+    "prepaid-card-order"
+  ],
+  "techStack": [
+    "Node.js ESM",
+    "ethers v6",
+    "Solidity 0.8.20",
+    "OpenZeppelin 5.x",
+    "Base (chain 8453)",
+    "Status Network Sepolia (chain 1660990954)"
+  ],
+  "computeConstraints": {
+    "maxDailySpendUsdc": 20,
+    "maxPerTxUsdc": 2,
+    "cooldownSeconds": 30,
+    "scanIntervalMs": 60000,
+    "onChainPolicyContract": "0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477"
+  },
+  "taskCategories": [
+    "cross-dex-arbitrage",
+    "liquidity-provision",
+    "agent-job-posting",
+    "agent-job-fulfillment",
+    "llm-trade-evaluation",
+    "on-chain-receipts",
+    "prepaid-card-purchase"
+  ],
+  "deployedContracts": {
+    "base": {
+      "SynthesisJobs": "0xCB98F0e2bb429E4a05203C57750A97Db280e6617",
+      "AgentSpendingPolicy": "0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477"
+    },
+    "statusNetworkSepolia": {
+      "SynthesisIdentity": "0x7Fb22E58cD1A6567CfF129d880Cc8db89190974A",
+      "AgentSpendingPolicy": "0xbbe1443E24587C7d38F9Da3eF8D809cCeF9AfCb3",
+      "SynthesisJobs": "0x95C7CA9eA98C97FFB82764e63e0d19FcCFD42956"
+    }
+  },
+  "repo": "https://github.com/darks0l/synthesis-agent",
+  "agentHarness": "openclaw",
+  "model": "claude-opus-4-6"
+}
