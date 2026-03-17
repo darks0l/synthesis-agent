@@ -42,6 +42,7 @@ import { FeedbackLoop } from './feedback.js';
 import { LiquidityManager } from './liquidity.js';
 import { CardManager } from './cards.js';
 import { MailManager } from './mail.js';
+import { VirtualsACP } from './virtuals.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -71,6 +72,8 @@ function showHelp() {
     UNISWAP_API_KEY       Uniswap Developer Platform API key
     AGENTMAIL_API_KEY     AgentMail API key for inter-agent communication
     AGENTMAIL_INBOX       AgentMail inbox address (auto-created if unset)
+    VIRTUALS_SESSION_KEY_ID  Virtuals ACP session entity key (optional)
+    VIRTUALS_AGENT_WALLET    Virtuals agent wallet override (optional)
     MAX_PER_TX            Max USDC per swap (default: 2.0)
     MAX_DAILY             Max USDC per day (default: 20.0)
     SCAN_INTERVAL         Scan interval in ms (default: 60000)
@@ -139,7 +142,7 @@ function banner() {
 ╔═══════════════════════════════════════════════════╗
 ║     🌑 SYNTHESIS AGENT — DARKSOL  v${version.padEnd(14)}║
 ║     Autonomous Agent Economy Orchestrator         ║
-║     Identity • LLM • Trading • LP • Mail • Cards  ║
+║   Identity • LLM • Trading • LP • ACP • Mail • Cards ║
 ╚═══════════════════════════════════════════════════╝
   `);
   console.log(`Mode: ${config.dryRun ? '🏜️ DRY RUN' : '🔴 LIVE'}`);
@@ -197,6 +200,15 @@ async function main() {
   log('main', `📬 AgentMail: ${mailReady ? '✓ ' + mail.inbox : '✗ not configured (set AGENTMAIL_API_KEY)'}`);
   if (mailReady) {
     await mail.publishListing();
+  }
+
+  // Initialize Virtuals ACP v2 (optional — cross-posts jobs to Virtuals agent network)
+  const virtualsAcp = new VirtualsACP();
+  if (wallet) {
+    const virtualsOk = await virtualsAcp.init(wallet);
+    log('main', `🌐 Virtuals ACP v2: ${virtualsOk ? '✓ connected' : '✗ not configured (optional — set VIRTUALS_SESSION_KEY_ID)'}`);
+  } else {
+    log('main', '🌐 Virtuals ACP v2: ✗ no wallet loaded');
   }
 
   // Initialize liquidity manager (requires wallet)
@@ -259,6 +271,14 @@ async function main() {
           }
         }
 
+        // 4b. Cross-post to Virtuals ACP v2 (if enabled)
+        if (virtualsAcp.enabled) {
+          const virtualsJob = await virtualsAcp.postTradeEvalJob(best);
+          if (virtualsJob) {
+            log('main', `🌐 Virtuals ACP job posted — cross-network evaluation`);
+          }
+        }
+
         // 5. Ask LLM to evaluate (or use outsourced result when available)
         log('main', `🧠 Evaluating: ${best.pair} (${best.spreadBps}bps spread)`);
         decision = await llm.evaluateOpportunity(best);
@@ -315,11 +335,17 @@ async function main() {
         log('main', '📊 No opportunities above threshold');
       }
 
-      // 10. Check pending ERC-8183 jobs
+      // 10. Check pending ERC-8183 jobs (both SynthesisJobs + Virtuals ACP)
       if (orchestrator.deployed && wallet) {
         const jobResults = await orchestrator.checkJobs(wallet);
         if (jobResults.length > 0) {
           log('main', `🔗 ERC-8183: ${jobResults.length} job(s) updated`);
+        }
+      }
+      if (virtualsAcp.enabled) {
+        const vJobs = await virtualsAcp.checkJobs();
+        if (vJobs.active > 0 || vJobs.completed > 0) {
+          log('main', `🌐 Virtuals ACP: ${vJobs.active} active, ${vJobs.completed} completed`);
         }
       }
 
@@ -443,6 +469,8 @@ async function main() {
     const cardStats = cards.getStats();
     console.log(`   Cards: ${cardStats.orderCount} ordered, $${cardStats.totalOrdered} total`);
     console.log(`   Mail: ${mailStats.received} received, ${mailStats.sent} sent`);
+    console.log(`   Virtuals ACP: ${virtualsAcp.enabled ? `${virtualsAcp.stats.jobsPosted} posted, ${virtualsAcp.stats.agentsDiscovered} agents discovered` : 'disabled'}`);
+
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);
   }

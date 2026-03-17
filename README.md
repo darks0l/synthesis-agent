@@ -23,10 +23,11 @@ Most "AI agents" are chatbots with a wallet. This one runs a business.
 1. **Scans** multiple DEXs for cross-exchange arbitrage opportunities
 2. **Routes** trade evaluations through a multi-provider LLM cascade (Bankr → OpenAI → Anthropic → OpenRouter → Ollama → hardcoded heuristic)
 3. **Executes** trades within scoped spending limits
-4. **Outsources** skills it needs to other agents via ERC-8183 on-chain job contracts
-5. **Communicates** with other agents via AgentMail — receives bids, sends results, publishes service listings
-6. **Learns** from every trade — validates outsourced work against its own history, adopts better heuristics
-7. **Reports** every action with on-chain receipts tied to its ERC-8004 identity
+4. **Outsources** skills it needs to other agents via ERC-8183 on-chain job contracts (SynthesisJobs + Virtuals ACP v2)
+5. **Cross-posts** jobs to the [Virtuals ACP v2](https://whitepaper.virtuals.io/acp-product-resources/introducing-acp-v2) network for cross-ecosystem agent discovery
+6. **Communicates** with other agents via AgentMail — receives bids, sends results, publishes service listings
+7. **Learns** from every trade — validates outsourced work against its own history, adopts better heuristics
+8. **Reports** every action with on-chain receipts tied to its ERC-8004 identity
 
 The closed loop: **Trade profits → fund LLM inference → smarter trades → more profit → afford better agent help → repeat.**
 
@@ -103,6 +104,7 @@ node scripts/demo-erc8183.js
 | **Scanner** | `src/scanner.js` | Cross-DEX price comparison (Uniswap V3 QuoterV2 + Aerodrome + Uniswap API) |
 | **LLM Gateway** | `src/llm.js` | 6-provider cascade with automatic failover |
 | **Orchestrator** | `src/orchestrator.js` | ERC-8183 job posting, bidding, fulfillment, price discovery |
+| **Virtuals ACP** | `src/virtuals.js` | Optional Virtuals ACP v2 integration — cross-post jobs to Virtuals agent network |
 | **Executor** | `src/executor.js` | Trade execution with on-chain AgentSpendingPolicy checks |
 | **Spending Policy** | `contracts/AgentSpendingPolicy.sol` | On-chain guardrails — human sets limits, agent cannot raise them |
 | **Liquidity** | `src/liquidity.js` | Uniswap V3 concentrated liquidity position management |
@@ -133,6 +135,19 @@ The agent outsources skills it needs to other agents via on-chain job contracts:
 - **USDC escrow**: Zero-fee, payment released only on evaluator attestation
 
 **Contract**: [`0xCB98F0e2bb429E4a05203C57750A97Db280e6617`](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617)
+
+### 🌐 Virtuals ACP v2 Integration (Optional)
+
+Cross-post ERC-8183 jobs to the [Virtuals Agent Commerce Protocol](https://whitepaper.virtuals.io/acp-product-resources/introducing-acp-v2) network:
+
+- **Agent discovery**: Browse and find specialized agents on the Virtuals registry
+- **Cross-network job posting**: Jobs posted to both SynthesisJobs (our contract) and Virtuals ACP simultaneously
+- **Unified workflow**: ACP v2's unified jobs interface for service + fund-transfer jobs
+- **Accounts**: Persistent on-chain relationship tracking between agents
+- **Notification memos**: Real-time progress updates within jobs
+- **Optional**: Only activates when `VIRTUALS_SESSION_KEY_ID` is configured — zero impact otherwise
+
+**ACP v2 Contract**: [`0xa6C9BA866992cfD7fd6460ba912bfa405adA9df0`](https://basescan.org/address/0xa6C9BA866992cfD7fd6460ba912bfa405adA9df0)
 
 ### 🧠 Multi-Provider LLM Routing
 
@@ -217,6 +232,8 @@ Convert USDC profits to real-world purchasing power:
 | `AGENTMAIL_INBOX` | auto-created | AgentMail inbox address |
 | `SYNTHESIS_JOBS_ADDRESS` | `0xCB98...6617` | ERC-8183 contract |
 | `SPENDING_POLICY` | `0xA928...0477` | On-chain spending policy contract |
+| `VIRTUALS_SESSION_KEY_ID` | — | Virtuals ACP session key (optional) |
+| `VIRTUALS_AGENT_WALLET` | agent wallet | Virtuals agent wallet override |
 
 ## On-Chain Artifacts
 

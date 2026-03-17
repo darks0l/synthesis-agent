@@ -143,6 +143,17 @@ export const config = {
     reserveEth: 0.002,     // Keep this much ETH for gas
   },
 
+  // ── Virtuals ACP v2 (optional — cross-post jobs to Virtuals agent network) ──
+  virtuals: {
+    enabled: !!(process.env.VIRTUALS_SESSION_KEY_ID || readKey('virtuals-session-key-id.txt')),
+    sessionKeyId: process.env.VIRTUALS_SESSION_KEY_ID || readKey('virtuals-session-key-id.txt'),
+    agentWallet: process.env.VIRTUALS_AGENT_WALLET || null, // defaults to agent address
+    rpcUrl: process.env.VIRTUALS_RPC_URL || null,           // defaults to chain.rpc
+    contractAddress: '0xa6C9BA866992cfD7fd6460ba912bfa405adA9df0', // ACP v2 on Base
+    registryUrl: 'https://app.virtuals.io/acp/join',
+    acpxUrl: 'https://acpx.virtuals.io',
+  },
+
   // ── AgentMail (inter-agent communication) ──
   mail: {
     apiKey: process.env.AGENTMAIL_API_KEY || readKey('agentmail-api-key.txt'),
