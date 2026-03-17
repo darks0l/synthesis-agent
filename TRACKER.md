@@ -38,7 +38,11 @@
 - [x] Start submission README + architecture diagram (10KB README done)
 - [x] COLLABORATION.md — human-agent decision log for submission
 - [x] Scanner restarted with all integrations live
-- [ ] Run arb scanner live → keep generating on-chain activity (⚠ low ETH: 0.00011)
+- [ ] Run arb scanner live → keep generating on-chain activity (⚠ low ETH: 0.0001)
+- [x] Built AgentMail module (src/mail.js) — inter-agent communication
+- [x] Full codebase audit + 10 fixes (wallet dedup, slippage, CLI, dead code, .env)
+- [x] 38 tests passing (config, feedback, cards, LLM, mail)
+- [x] Version bump to v0.2.0
 
 ### Day 3-4 (March 17-18) — Integration & Demo
 - [ ] Get Bankr LLM credits funded (blocker — running heuristic only)
@@ -66,12 +70,13 @@
 ## Prize Targets
 1. Let the Agent Cook — $4k/$2.5k/$1.5k
 2. ERC-8004 Agents With Receipts — $4k/$3k/$1k
-3. Bankr LLM Gateway — $3k/$1.5k/$500
-4. Uniswap Agentic Finance — $2.5k/$1.5k/$1k
-5. Open Track — $14.5k
-6. bond.credit — $1k/$500
-7. AgentCash x402 — $1k/$500/$250
-8. Status Network Gasless — $50
+3. ERC-8183 Open Build (Virtuals) — $2k
+4. Bankr LLM Gateway — $3k/$1.5k/$500
+5. Uniswap Agentic Finance — $2.5k/$1.5k/$1k
+6. Open Track — $14.5k
+7. bond.credit — $1k/$500
+8. AgentCash x402 — $1k/$500/$250
+9. Status Network Gasless — $50
 
 ## On-Chain Artifacts
 - ERC-8004 TX: https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba
@@ -111,3 +116,14 @@
   - Approved targets: Uniswap SwapRouter02 + Aerodrome Router
   - Human-controlled: owner sets limits, agent cannot raise them
   - Emergency freeze function for instant kill
+- Wired spending policy into executor (on-chain wouldApprove + requestApproval)
+- Added Uniswap Developer Platform API as 3rd scanner source
+- Built `src/liquidity.js` — Uniswap V3 concentrated LP management (497 lines)
+- ERC-8183 Job #1 full lifecycle completed on-chain
+- Built `src/mail.js` — AgentMail inter-agent communication (339 lines)
+- Full codebase audit: fixed wallet dedup, slippage protection, dead code, CLI --help/--version
+- Created `.env.example` + `.env` support for portability
+- Wrote 38 tests (config, feedback, cards, LLM, mail) — all passing
+- **v0.2.0 released** — 19 commits, 48 files, 19,364 lines, 11 source modules
+- Added ERC-8183 Open Build track (Virtuals, $2k) — now targeting 9 tracks
+- Wallet: ~0.0001 ETH + 11.5 USDC on Base

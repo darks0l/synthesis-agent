@@ -244,8 +244,9 @@ Convert USDC profits to real-world purchasing power:
 |-------|-------|-----------|
 | Let the Agent Cook | $4k / $2.5k / $1.5k | Autonomous trading + LLM evaluation + self-sustaining economics |
 | ERC-8004 Agents With Receipts | $4k / $3k / $1k | Verified identity + on-chain receipt trail |
+| ERC-8183 Open Build (Virtuals) | $2k | Core integration — SynthesisJobs contract, 5 skill types, price discovery, provider reputation |
 | Bankr LLM Gateway | $3k / $1.5k / $500 | Primary LLM provider, economic loop |
-| Uniswap Agentic Finance | $2.5k / $1.5k / $1k | Cross-DEX scanner, Uniswap V3 integration |
+| Uniswap Agentic Finance | $2.5k / $1.5k / $1k | Cross-DEX scanner, Uniswap V3 LP management, Trading API |
 | AgentCash x402 | $1k / $500 / $250 | x402 facilitator integration |
 | bond.credit | $1k / $500 | On-chain identity + reputation |
 | Open Track | $14.5k pool | Full stack showcase |
