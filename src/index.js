@@ -234,12 +234,35 @@ async function main() {
   // When ETH drops below threshold, swap USDC → WETH → ETH to keep gas alive
   async function autoRefuel(wallet, currentBalances) {
     const ethBal = parseFloat(currentBalances.eth);
-    const usdcBal = parseFloat(currentBalances.usdc);
     const MIN_ETH = 0.002;        // refuel when below this
     const REFUEL_USDC = 3.0;      // swap this much USDC for ETH
     const MIN_USDC_RESERVE = 2.0; // keep at least this much USDC
 
     if (ethBal >= MIN_ETH) return false;
+
+    // Direct USDC check (bypasses identity module which has RPC issues)
+    let usdcBal = 0;
+    try {
+      const usdcCheck = new ethers.Contract(config.tokens.USDC,
+        ['function balanceOf(address) view returns (uint256)'], wallet.provider);
+      const raw = await usdcCheck.balanceOf(wallet.address);
+      usdcBal = parseFloat(ethers.formatUnits(raw, 6));
+    } catch {
+      // If even this fails, try one more time with a delay
+      try {
+        await new Promise(r => setTimeout(r, 2000));
+        const usdcRetry = new ethers.Contract(config.tokens.USDC,
+          ['function balanceOf(address) view returns (uint256)'], wallet.provider);
+        const raw = await usdcRetry.balanceOf(wallet.address);
+        usdcBal = parseFloat(ethers.formatUnits(raw, 6));
+      } catch {
+        logWarn('refuel', 'Cannot read USDC balance — skipping refuel');
+        return false;
+      }
+    }
+
+    log('refuel', `⛽ Balance check: ETH=${ethBal}, USDC=${usdcBal}`);
+
     if (usdcBal < REFUEL_USDC + MIN_USDC_RESERVE) {
       logWarn('refuel', `ETH low (${ethBal}) but USDC too low to refuel (${usdcBal})`);
       return false;
@@ -253,7 +276,7 @@ async function main() {
     log('refuel', `⛽ Swapping ${REFUEL_USDC} USDC → WETH → ETH...`);
 
     try {
-      const usdc = new ethers.Contract(config.tokens.usdc, [
+      const usdc = new ethers.Contract(config.tokens.USDC, [
         'function approve(address,uint256) returns (bool)',
         'function allowance(address,address) view returns (uint256)',
       ], wallet);
@@ -273,8 +296,8 @@ async function main() {
       ], wallet);
 
       const swapTx = await router.exactInputSingle({
-        tokenIn: config.tokens.usdc,
-        tokenOut: config.tokens.weth,
+        tokenIn: config.tokens.USDC,
+        tokenOut: config.tokens.WETH,
         fee: 500,
         recipient: wallet.address,
         amountIn,
@@ -285,7 +308,7 @@ async function main() {
       log('refuel', `⛽ Swapped USDC → WETH | TX: ${receipt.hash}`);
 
       // Unwrap WETH → ETH
-      const weth = new ethers.Contract(config.tokens.weth, [
+      const weth = new ethers.Contract(config.tokens.WETH, [
         'function balanceOf(address) view returns (uint256)',
         'function withdraw(uint256) external',
       ], wallet);
