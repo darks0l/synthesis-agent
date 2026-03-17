@@ -260,11 +260,25 @@ Consider: is the profit worth the gas? Is the spread suspicious? Would you execu
 
     const response = await this.ask(prompt);
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      // Strip markdown code fences if present
+      const cleaned = response.replace(/```(?:json)?\s*/g, '').replace(/```/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          execute: Boolean(parsed.execute),
+          confidence: Number(parsed.confidence) || 50,
+          reasoning: String(parsed.reasoning || 'LLM evaluation'),
+        };
       }
     } catch {}
+
+    // Try to extract intent from natural language response
+    const lower = response.toLowerCase();
+    const shouldExecute = lower.includes('yes') || lower.includes('execute') || lower.includes('recommend');
+    const shouldSkip = lower.includes('no') || lower.includes('skip') || lower.includes('avoid') || lower.includes('not worth');
+    if (shouldSkip) return { execute: false, confidence: 40, reasoning: `LLM advised against: ${response.slice(0, 120)}` };
+    if (shouldExecute) return { execute: true, confidence: 55, reasoning: `LLM recommended: ${response.slice(0, 120)}` };
 
     return { execute: false, confidence: 20, reasoning: 'Could not parse LLM response' };
   }
