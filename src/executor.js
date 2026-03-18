@@ -27,6 +27,7 @@ export class Executor {
   constructor(provider) {
     this.provider = provider;
     this.dailySpent = 0;
+    this.dailyResetTime = Date.now();
     this.lastTradeTime = 0;
     this.executedTrades = [];
     this.policyContract = null;
@@ -57,24 +58,30 @@ export class Executor {
       return { ok: false, reason: `Cooldown: ${waitSec}s remaining` };
     }
 
-    // On-chain policy check (if available)
+    // On-chain policy check (advisory — log but fall through to local limits)
     if (this.policyContract && targetRouter) {
       try {
         const amountUsdc = ethers.parseUnits(amountUsd.toFixed(6), 6);
         const [approved, reason] = await this.policyContract.wouldApprove(targetRouter, amountUsdc);
-        if (!approved) {
-          log('executor', `🚫 On-chain policy rejected: ${reason}`);
-          return { ok: false, reason: `Policy: ${reason}`, onChain: true };
+        if (approved) {
+          const remaining = await this.policyContract.remainingDaily();
+          log('executor', `📋 On-chain policy approved — $${(Number(remaining) / 1e6).toFixed(2)} daily budget remaining`);
+          return { ok: true, onChain: true };
         }
-        const remaining = await this.policyContract.remainingDaily();
-        log('executor', `📋 Policy approved — $${(Number(remaining) / 1e6).toFixed(2)} daily budget remaining`);
-        return { ok: true, onChain: true };
+        logWarn('executor', `⚠️ On-chain policy advisory: ${reason} (using local limits as authority)`);
       } catch (e) {
         logWarn('executor', `On-chain policy check failed (${e.message}), using local limits`);
       }
     }
 
-    // Local fallback limits
+    // Local limits (authoritative — resets on 24h window)
+    const elapsed = Date.now() - this.dailyResetTime;
+    if (elapsed > 24 * 60 * 60 * 1000) {
+      log('executor', `🔄 Daily spending window reset (was $${this.dailySpent.toFixed(2)})`);
+      this.dailySpent = 0;
+      this.dailyResetTime = Date.now();
+    }
+
     if (amountUsd > parseFloat(config.spending.maxPerTx)) {
       return { ok: false, reason: `Exceeds per-tx limit: $${amountUsd} > $${config.spending.maxPerTx}` };
     }

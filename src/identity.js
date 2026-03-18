@@ -33,15 +33,22 @@ export class AgentIdentity {
   async getBalances() {
     const ethBalance = await this.provider.getBalance(this.address);
     let usdcBalance = 0n;
-    try {
-      const usdcContract = new ethers.Contract(
-        config.tokens.USDC,
-        ['function balanceOf(address) view returns (uint256)'],
-        this.provider
-      );
-      usdcBalance = await usdcContract.balanceOf(this.address);
-    } catch {
-      log('identity', '⚠ USDC balance check failed (RPC issue) — assuming 0');
+    const rpcs = [this.provider, new ethers.JsonRpcProvider('https://base.llamarpc.com'), new ethers.JsonRpcProvider('https://1rpc.io/base')];
+    for (const rpc of rpcs) {
+      try {
+        const usdcContract = new ethers.Contract(
+          config.tokens.USDC,
+          ['function balanceOf(address) view returns (uint256)'],
+          rpc
+        );
+        usdcBalance = await usdcContract.balanceOf(this.address);
+        break;
+      } catch {
+        continue;
+      }
+    }
+    if (usdcBalance === 0n) {
+      log('identity', '⚠ USDC balance check failed on all RPCs — assuming 0');
     }
 
     return {

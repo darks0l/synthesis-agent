@@ -4,21 +4,21 @@
   "providerScores": {},
   "pairInsights": {
     "WETH/USDC": {
-      "trades": 1243,
+      "trades": 1308,
       "wins": 0,
-      "avgSpread": 44.929203539823,
+      "avgSpread": 44.77599388379208,
       "lastOutcome": null
     },
     "USDC/WETH": {
-      "trades": 44,
+      "trades": 111,
       "wins": 0,
-      "avgSpread": 51.15909090909091,
+      "avgSpread": 46.522522522522536,
       "lastOutcome": null
     },
     "WETH/DAI": {
-      "trades": 102,
+      "trades": 299,
       "wins": 0,
-      "avgSpread": 77.81372549019608,
+      "avgSpread": 66.10702341137132,
       "lastOutcome": null
     }
   },
