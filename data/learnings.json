@@ -10,15 +10,15 @@
       "lastOutcome": null
     },
     "USDC/WETH": {
-      "trades": 112,
+      "trades": 130,
       "wins": 0,
-      "avgSpread": 46.58035714285716,
+      "avgSpread": 46.14615384615386,
       "lastOutcome": null
     },
     "WETH/DAI": {
-      "trades": 299,
+      "trades": 319,
       "wins": 0,
-      "avgSpread": 66.10702341137132,
+      "avgSpread": 65.05642633228847,
       "lastOutcome": null
     }
   },
