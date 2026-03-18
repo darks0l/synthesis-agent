@@ -77,7 +77,7 @@ export class Dashboard {
         if (this._bankrCache.data && now - this._bankrCache.ts < 60000) {
           return res.json(this._bankrCache.data);
         }
-        const apiKey = config.llm?.bankr?.apiKey;
+        const apiKey = config.llm?.bankrApiKey;
         if (!apiKey) return res.json({ error: 'no_key' });
 
         const [usageRes, creditsRes] = await Promise.all([
