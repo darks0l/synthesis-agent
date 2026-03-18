@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌑 DARKSOL Synthesis Agent</title>
+<style>
+  :root {
+    --bg: #0a0a0a; --surface: #111; --surface2: #1a1a1a; --border: #222;
+    --gold: #d4a017; --gold-dim: #8b6914; --green: #00ff88; --red: #ff4444;
+    --blue: #4a9eff; --purple: #a855f7; --text: #e0e0e0; --muted: #666;
+    --font: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; overflow-x: hidden; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #0d0d0d, #1a1a0a); border-bottom: 1px solid var(--gold-dim); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { color: var(--gold); font-size: 18px; letter-spacing: 2px; }
+  .header .status-pill { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+  .status-live { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .status-dry { background: rgba(255,68,68,0.15); color: var(--red); border: 1px solid rgba(255,68,68,0.3); }
+
+  /* Grid layout */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; padding: 16px; }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card h2 { color: var(--gold); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .card.wide { grid-column: span 2; }
+
+  /* Stats */
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat { background: var(--surface2); border-radius: 6px; padding: 10px; }
+  .stat-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { color: var(--text); font-size: 18px; font-weight: bold; margin-top: 2px; }
+  .stat-value.gold { color: var(--gold); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.blue { color: var(--blue); }
+
+  /* Event feed */
+  .feed { max-height: 400px; overflow-y: auto; }
+  .feed-item { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12px; display: flex; gap: 8px; }
+  .feed-item:hover { background: var(--surface2); }
+  .feed-time { color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+  .feed-type { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; flex-shrink: 0; }
+  .feed-type.scan { background: rgba(74,158,255,0.15); color: var(--blue); }
+  .feed-type.trade { background: rgba(0,255,136,0.15); color: var(--green); }
+  .feed-type.llm { background: rgba(168,85,247,0.15); color: var(--purple); }
+  .feed-type.error { background: rgba(255,68,68,0.15); color: var(--red); }
+  .feed-type.info { background: rgba(212,160,23,0.15); color: var(--gold); }
+  .feed-msg { color: var(--text); word-break: break-all; }
+
+  /* Trade table */
+  .trade-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .trade-table th { text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .trade-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .trade-table tr:hover td { background: var(--surface2); }
+  .tx-link { color: var(--blue); text-decoration: none; }
+  .tx-link:hover { text-decoration: underline; }
+
+  /* TA panel */
+  .ta-indicators { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .ta-ind { background: var(--surface2); border-radius: 4px; padding: 8px; text-align: center; }
+  .ta-ind-name { color: var(--muted); font-size: 10px; }
+  .ta-ind-val { font-size: 14px; font-weight: bold; margin-top: 2px; }
+  .signal-strong_buy, .signal-buy { color: var(--green); }
+  .signal-hold, .signal-neutral { color: var(--gold); }
+  .signal-sell, .signal-strong_sell { color: var(--red); }
+
+  /* Contracts */
+  .contract-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .contract-name { color: var(--muted); }
+  .contract-addr { color: var(--blue); font-size: 11px; }
+  .contract-addr a { color: var(--blue); text-decoration: none; }
+  .contract-addr a:hover { text-decoration: underline; }
+
+  /* Connection dot */
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .conn-dot.disconnected { background: var(--red); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .card.wide { grid-column: span 1; } }
+
+  /* Pulse animation for live indicator */
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🌑 DARKSOL — SYNTHESIS AGENT</h1>
+    <div style="color: var(--muted); font-size: 11px; margin-top: 4px;">
+      <span class="conn-dot connected pulse" id="connDot"></span>
+      <span id="connStatus">Connecting...</span>
+      &nbsp;|&nbsp; Cycle <span id="cycleNum">0</span>
+      &nbsp;|&nbsp; Uptime <span id="uptime">0s</span>
+    </div>
+  </div>
+  <div>
+    <span class="status-pill status-live" id="modePill">LIVE</span>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- Wallet -->
+  <div class="card">
+    <h2>💰 Wallet</h2>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">ETH Balance</div>
+        <div class="stat-value green" id="ethBal">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">USDC Balance</div>
+        <div class="stat-value blue" id="usdcBal">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Agent Address</div>
+        <div class="stat-value" style="font-size: 10px; word-break: break-all;" id="agentAddr">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">ERC-8004 Identity</div>
+        <div class="stat-value gold" id="identityStatus">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trading -->
+  <div class="card">
+    <h2>💱 Trading</h2>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Trades Executed</div>
+        <div class="stat-value green" id="tradeCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Daily Spent</div>
+        <div class="stat-value" id="dailySpent">$0 / $20</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Last Spread</div>
+        <div class="stat-value blue" id="lastSpread">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Last Decision</div>
+        <div class="stat-value" id="lastDecision">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LLM -->
+  <div class="card">
+    <h2>🧠 LLM Intelligence</h2>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Provider</div>
+        <div class="stat-value gold" id="llmProvider">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Model</div>
+        <div class="stat-value" id="llmModel" style="font-size: 12px;">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">API Calls</div>
+        <div class="stat-value blue" id="llmCalls">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Tokens Used</div>
+        <div class="stat-value" id="llmTokens">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scanner -->
+  <div class="card">
+    <h2>🔍 Scanner</h2>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Pairs Scanned</div>
+        <div class="stat-value blue" id="pairsScanned">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Opportunities</div>
+        <div class="stat-value green" id="oppsFound">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">LP Positions</div>
+        <div class="stat-value" id="lpPos">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Scan Interval</div>
+        <div class="stat-value" id="scanInterval">60s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TA Indicators -->
+  <div class="card">
+    <h2>📊 Technical Analysis</h2>
+    <div class="ta-indicators" id="taPanel">
+      <div class="ta-ind"><div class="ta-ind-name">RSI</div><div class="ta-ind-val" id="ta-rsi">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">MACD</div><div class="ta-ind-val" id="ta-macd">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">Bollinger</div><div class="ta-ind-val" id="ta-bollinger">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">Stochastic</div><div class="ta-ind-val" id="ta-stochastic">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">ATR</div><div class="ta-ind-val" id="ta-atr">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">OBV</div><div class="ta-ind-val" id="ta-obv">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">VWAP</div><div class="ta-ind-val" id="ta-vwap">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">Signal</div><div class="ta-ind-val gold" id="ta-signal">—</div></div>
+      <div class="ta-ind"><div class="ta-ind-name">Confidence</div><div class="ta-ind-val" id="ta-confidence">—</div></div>
+    </div>
+  </div>
+
+  <!-- Contracts -->
+  <div class="card">
+    <h2>📜 On-Chain Contracts</h2>
+    <div id="contractsList">
+      <div class="contract-row">
+        <span class="contract-name">ERC-8004 Identity</span>
+        <span class="contract-addr"><a href="https://basescan.org/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" target="_blank">0x8004...a432</a></span>
+      </div>
+      <div class="contract-row">
+        <span class="contract-name">SynthesisJobs (ERC-8183)</span>
+        <span class="contract-addr"><a href="https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617" target="_blank">0xCB98...6617</a></span>
+      </div>
+      <div class="contract-row">
+        <span class="contract-name">SpendingPolicy</span>
+        <span class="contract-addr"><a href="https://basescan.org/address/0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477" target="_blank">0xA928...0477</a></span>
+      </div>
+      <div class="contract-row">
+        <span class="contract-name">Agent Wallet</span>
+        <span class="contract-addr"><a href="https://basescan.org/address/0x3e6e304421993D7E95a77982E11C93610DD4fFC5" target="_blank">0x3e6e...fFC5</a></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Feed -->
+  <div class="card wide">
+    <h2>📡 Live Event Feed</h2>
+    <div class="feed" id="eventFeed">
+      <div class="feed-item" style="color: var(--muted); justify-content: center;">Waiting for events...</div>
+    </div>
+  </div>
+
+  <!-- Trade History -->
+  <div class="card wide">
+    <h2>📋 Trade History</h2>
+    <div style="max-height: 300px; overflow-y: auto;">
+      <table class="trade-table" id="tradeTable">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Pair</th>
+            <th>Spread</th>
+            <th>Decision</th>
+            <th>Confidence</th>
+            <th>TX</th>
+          </tr>
+        </thead>
+        <tbody id="tradeBody">
+          <tr><td colspan="6" style="color: var(--muted); text-align: center;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let ws;
+let reconnectTimer;
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}`);
+
+  ws.onopen = () => {
+    $('connDot').className = 'conn-dot connected pulse';
+    $('connStatus').textContent = 'Connected';
+    clearTimeout(reconnectTimer);
+  };
+
+  ws.onclose = () => {
+    $('connDot').className = 'conn-dot disconnected';
+    $('connStatus').textContent = 'Reconnecting...';
+    reconnectTimer = setTimeout(connect, 3000);
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'init' || msg.type === 'status') updateStatus(msg.data);
+    if (msg.type === 'events') msg.data.forEach(addEvent);
+    if (msg.type === 'scan') addEvent(msg);
+    if (msg.type === 'trade') { addEvent(msg); loadTrades(); }
+    if (msg.type === 'llm') addEvent(msg);
+    if (msg.type === 'ta') updateTA(msg.data);
+    if (msg.type === 'cycle') { addEvent(msg); updateStatus(msg.data); }
+    if (msg.type === 'refuel') addEvent(msg);
+    if (msg.type === 'error') addEvent(msg);
+    if (msg.type === 'info') addEvent(msg);
+    if (msg.type === 'receipt') addEvent(msg);
+  };
+}
+
+function updateStatus(s) {
+  if (!s) return;
+  $('modePill').textContent = s.mode || 'LIVE';
+  $('modePill').className = 'status-pill ' + (s.mode === 'DRY RUN' ? 'status-dry' : 'status-live');
+  $('cycleNum').textContent = s.cycle || 0;
+  if (s.uptime) $('uptime').textContent = formatUptime(s.uptime);
+  if (s.address) $('agentAddr').textContent = s.address;
+
+  if (s.balances) {
+    $('ethBal').textContent = parseFloat(s.balances.eth || 0).toFixed(5) + ' ETH';
+    $('usdcBal').textContent = parseFloat(s.balances.usdc || 0).toFixed(2) + ' USDC';
+  }
+
+  if (s.identity) {
+    $('identityStatus').textContent = s.identity.verified ? '✓ Token #' + s.identity.tokenId : '✗ Unverified';
+    $('identityStatus').className = 'stat-value ' + (s.identity.verified ? 'green' : 'red');
+  }
+
+  if (s.llm) {
+    $('llmProvider').textContent = s.llm.provider || '—';
+    $('llmModel').textContent = s.llm.model || '—';
+    $('llmCalls').textContent = s.llm.calls || 0;
+    $('llmTokens').textContent = (s.llm.tokens || 0).toLocaleString();
+  }
+
+  if (s.trading) {
+    $('tradeCount').textContent = s.trading.executed || 0;
+    $('dailySpent').textContent = '$' + (s.trading.dailySpent || 0).toFixed(2) + ' / $' + (s.trading.dailyLimit || 20);
+    if (s.trading.lastSpread != null) $('lastSpread').textContent = s.trading.lastSpread + ' bps';
+    if (s.trading.lastDecision) {
+      const d = s.trading.lastDecision;
+      $('lastDecision').textContent = (d.execute ? '✅ Execute' : '❌ Skip') + ' (' + d.confidence + '%)';
+      $('lastDecision').className = 'stat-value ' + (d.execute ? 'green' : 'red');
+    }
+  }
+
+  if (s.scanner) {
+    $('pairsScanned').textContent = s.scanner.pairsScanned || 0;
+    $('oppsFound').textContent = s.scanner.opportunitiesFound || 0;
+  }
+  if (s.lp) $('lpPos').textContent = s.lp.positions || 0;
+}
+
+function updateTA(ta) {
+  if (!ta) return;
+  const indicators = ['rsi', 'macd', 'bollinger', 'stochastic', 'atr', 'obv', 'vwap'];
+  for (const ind of indicators) {
+    const el = $('ta-' + ind);
+    if (el && ta[ind] != null) {
+      if (typeof ta[ind] === 'object') {
+        el.textContent = ta[ind].signal || ta[ind].value || '—';
+      } else {
+        el.textContent = typeof ta[ind] === 'number' ? ta[ind].toFixed(1) : ta[ind];
+      }
+    }
+  }
+  if (ta.signal) { $('ta-signal').textContent = ta.signal; $('ta-signal').className = 'ta-ind-val signal-' + ta.signal.toLowerCase(); }
+  if (ta.confidence != null) $('ta-confidence').textContent = ta.confidence + '%';
+}
+
+function addEvent(evt) {
+  const feed = $('eventFeed');
+  if (feed.querySelector('.feed-item[style]')) feed.innerHTML = '';
+
+  const div = document.createElement('div');
+  div.className = 'feed-item';
+  const time = evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : '—';
+  const type = evt.type || 'info';
+  const typeClass = ['scan','trade','llm','error','info','receipt','refuel','cycle','ta','status'].includes(type) ?
+    (['trade','refuel'].includes(type) ? 'trade' : type === 'error' ? 'error' : type === 'llm' ? 'llm' : type === 'scan' ? 'scan' : 'info') : 'info';
+  const msg = typeof evt.data === 'string' ? evt.data : (evt.data?.message || evt.data?.pair || JSON.stringify(evt.data || '').slice(0, 120));
+  div.innerHTML = `<span class="feed-time">${time}</span><span class="feed-type ${typeClass}">${type.toUpperCase()}</span><span class="feed-msg">${msg}</span>`;
+  feed.prepend(div);
+
+  // Keep feed size manageable
+  while (feed.children.length > 100) feed.lastChild.remove();
+}
+
+async function loadTrades() {
+  try {
+    const res = await fetch('/api/trades');
+    const trades = await res.json();
+    const tbody = $('tradeBody');
+    if (!trades.length) { tbody.innerHTML = '<tr><td colspan="6" style="color: var(--muted); text-align: center;">No trades yet</td></tr>'; return; }
+    tbody.innerHTML = trades.slice(-20).reverse().map(t => {
+      const time = t.timestamp ? new Date(t.timestamp).toLocaleString() : '—';
+      const txShort = t.txHash ? t.txHash.slice(0, 10) + '...' : '—';
+      const txLink = t.txHash ? `<a class="tx-link" href="https://basescan.org/tx/${t.txHash}" target="_blank">${txShort}</a>` : '—';
+      const decColor = t.decision === 'execute' ? 'green' : 'red';
+      return `<tr><td>${time}</td><td>${t.pair || '—'}</td><td>${t.spread || '—'} bps</td><td style="color:var(--${decColor})">${t.decision || '—'}</td><td>${t.confidence || '—'}%</td><td>${txLink}</td></tr>`;
+    }).join('');
+  } catch {}
+}
+
+function formatUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+  const h = Math.floor(s/3600);
+  return h + 'h ' + Math.floor((s%3600)/60) + 'm';
+}
+
+// Update uptime every second
+setInterval(() => {
+  const el = $('uptime');
+  // Just re-request status periodically
+}, 1000);
+
+// Periodic status poll as backup
+setInterval(async () => {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    updateStatus(data);
+  } catch {}
+}, 10000);
+
+connect();
+loadTrades();
+</script>
+</body>
+</html>

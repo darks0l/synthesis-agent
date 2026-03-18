@@ -31,7 +31,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { ethers } from 'ethers';
 import { config } from './config.js';
-import { log, logError } from './logger.js';
+import { log, logError, logWarn } from './logger.js';
 import { AgentIdentity } from './identity.js';
 import { LLMGateway } from './llm.js';
 import { Scanner } from './scanner.js';
@@ -44,6 +44,7 @@ import { CardManager } from './cards.js';
 import { MailManager } from './mail.js';
 import { VirtualsACP } from './virtuals.js';
 import { TAEngine } from './ta.js';
+import { Dashboard } from './dashboard.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -216,6 +217,30 @@ async function main() {
   const ta = new TAEngine();
   log('main', '📊 TA Engine: ✓ initialized (RSI, MACD, Bollinger, Stochastic, ATR, OBV, VWAP, Fibonacci, S/R, Divergence)');
 
+  // Initialize dashboard (web GUI)
+  const dashboardEnabled = !process.argv.includes('--no-dashboard');
+  const agentState = {
+    address: config.agentAddress,
+    dryRun: config.dryRun,
+    startTime: Date.now(),
+    cycleCount: 0,
+    balances: { eth: balances.eth, usdc: balances.usdc },
+    identityVerified: identityOk,
+    llmProvider: llm.providerName || 'heuristic',
+    llmModel: llm.modelName || 'fallback',
+    llmCalls: 0, llmTokens: 0,
+    tradesExecuted: 0, dailySpent: 0, dailyLimit: config.spending.maxDaily,
+    lastSpread: null, lastDecision: null, lastTA: null,
+    lpPositions: liquidityMgr ? liquidityMgr.positions.length : 0,
+    pairsScanned: 0, opportunitiesFound: 0,
+    config: { dashboard: { port: parseInt(process.env.DASHBOARD_PORT || '3000') } },
+  };
+  let dashboard = null;
+  if (dashboardEnabled) {
+    dashboard = new Dashboard(agentState);
+    await dashboard.start();
+  }
+
   // Initialize liquidity manager (requires wallet)
   let liquidityMgr = null;
   if (wallet) {
@@ -331,7 +356,8 @@ async function main() {
 
   // ── Agent Loop ──
   async function cycle() {
-    log('main', `═══ Cycle ${reporter.cycleCount + 1} ═══`);
+    agentState.cycleCount = reporter.cycleCount + 1;
+    log('main', `═══ Cycle ${agentState.cycleCount} ═══`);
 
     try {
       // 0. Check balances and auto-refuel if ETH is low
@@ -340,6 +366,7 @@ async function main() {
         const refueled = await autoRefuel(wallet, preBalances);
         if (refueled) {
           log('main', '⛽ Auto-refueled — continuing with fresh gas');
+          if (dashboard) dashboard.push('refuel', { message: '⛽ Auto-refueled — swapped USDC → ETH for gas' });
         }
       }
 
@@ -367,6 +394,16 @@ async function main() {
 
       let decision = null;
       let tradeResult = null;
+
+      // Update dashboard with scan results
+      agentState.pairsScanned += opportunities.length;
+      if (best) {
+        agentState.opportunitiesFound++;
+        agentState.lastSpread = best.spreadBps;
+        if (dashboard) dashboard.push('scan', { message: `Found ${best.pair} — ${best.spreadBps}bps spread`, pair: best.pair, spreadBps: best.spreadBps, source: best.source });
+      } else {
+        if (dashboard) dashboard.push('scan', { message: `Scanned ${opportunities.length} pairs — no opportunities above threshold` });
+      }
 
       if (best) {
         // 4. Post ERC-8183 job for trade evaluation (if orchestrator deployed)
@@ -396,14 +433,20 @@ async function main() {
         const taResult = await ta.analyze('ethereum');
         if (taResult.signal !== 'insufficient_data') {
           log('main', `📊 TA: ${taResult.signal.toUpperCase()} (${taResult.confidence}% confidence) → ${taResult.recommendation}`);
-          best.ta = taResult; // Attach TA context to opportunity for LLM
+          best.ta = taResult;
           best.taContext = ta.formatForLLM(taResult);
+          agentState.lastTA = { signal: taResult.signal, confidence: taResult.confidence, recommendation: taResult.recommendation, rsi: taResult.indicators?.rsi, macd: taResult.indicators?.macd?.signal, bollinger: taResult.indicators?.bollinger?.signal, stochastic: taResult.indicators?.stochastic?.signal, atr: taResult.indicators?.atr?.value, obv: taResult.indicators?.obv?.signal, vwap: taResult.indicators?.vwap?.signal };
+          if (dashboard) dashboard.push('ta', agentState.lastTA);
         }
 
         // 5. Ask LLM to evaluate (or use outsourced result when available)
         log('main', `🧠 Evaluating: ${best.pair} (${best.spreadBps}bps spread)`);
         decision = await llm.evaluateOpportunity(best);
         log('main', `Decision: execute=${decision.execute}, confidence=${decision.confidence}%`);
+        agentState.lastDecision = decision;
+        agentState.llmCalls = llm.totalCalls;
+        agentState.llmTokens = llm.totalTokens;
+        if (dashboard) dashboard.push('llm', { message: `${decision.execute ? '✅' : '❌'} ${best.pair} — confidence ${decision.confidence}% | ${decision.reasoning?.slice(0, 100)}`, pair: best.pair, execute: decision.execute, confidence: decision.confidence });
 
         // 6. If orchestrator job was posted, self-fulfill with our evaluation result
         if (orchestratorJob && config.orchestrator.selfFulfill && wallet) {
@@ -422,6 +465,13 @@ async function main() {
           log('main', `🔄 Trade approved (confidence ${decision.confidence}% >= ${threshold}% adaptive threshold) — executing...`);
           if (wallet) {
             tradeResult = await executor.executeSwap(best, wallet);
+            if (tradeResult?.success) {
+              agentState.tradesExecuted++;
+              agentState.dailySpent += parseFloat(best.amountIn || 0);
+              if (dashboard) dashboard.push('trade', { message: `✅ Executed ${best.pair} — TX: ${tradeResult.txHash?.slice(0, 14)}...`, pair: best.pair, txHash: tradeResult.txHash, spreadBps: best.spreadBps });
+            } else {
+              if (dashboard) dashboard.push('trade', { message: `❌ Blocked: ${tradeResult?.reason || 'unknown'}`, pair: best.pair });
+            }
           } else {
             tradeResult = { success: false, reason: 'No wallet available' };
           }
@@ -545,6 +595,8 @@ async function main() {
       // Update balances
       const newBalances = await identity.getBalances();
       log('main', `💰 Post-cycle — ETH: ${newBalances.eth} | USDC: ${newBalances.usdc}`);
+      agentState.balances = newBalances;
+      if (dashboard) dashboard.pushStatus();
 
     } catch (err) {
       logError('main', `Cycle error: ${err.message}`);
