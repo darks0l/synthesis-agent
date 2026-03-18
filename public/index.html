@@ -181,6 +181,32 @@
     </div>
   </div>
 
+  <!-- Bankr LLM Gateway -->
+  <div class="card">
+    <h2>💳 Bankr LLM Gateway</h2>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Credits Remaining</div>
+        <div class="stat-value green" id="bankrCredits">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Spent</div>
+        <div class="stat-value red" id="bankrSpent">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Requests</div>
+        <div class="stat-value blue" id="bankrRequests">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Tokens</div>
+        <div class="stat-value" id="bankrTokens">—</div>
+      </div>
+    </div>
+    <div style="margin-top: 8px; font-size: 11px; color: var(--muted);">
+      <span id="bankrModels">—</span>
+    </div>
+  </div>
+
   <!-- Scanner -->
   <div class="card">
     <h2>🔍 Scanner</h2>
@@ -428,8 +454,27 @@ setInterval(async () => {
   } catch {}
 }, 10000);
 
+async function loadBankr() {
+  try {
+    const res = await fetch('/api/bankr');
+    const d = await res.json();
+    if (d.error) return;
+    $('bankrCredits').textContent = '$' + (d.credits || 0).toFixed(2);
+    $('bankrCredits').className = 'stat-value ' + (d.credits > 1 ? 'green' : 'red');
+    $('bankrSpent').textContent = '$' + (d.totalCost || 0).toFixed(4);
+    $('bankrRequests').textContent = (d.totalRequests || 0).toLocaleString();
+    $('bankrTokens').textContent = (d.totalTokens || 0).toLocaleString();
+    if (d.models && d.models.length) {
+      $('bankrModels').textContent = d.models.map(m => m.model + ' (' + m.requests + ' req)').join(' · ');
+    }
+  } catch {}
+}
+// Refresh Bankr stats every 60s
+setInterval(loadBankr, 60000);
+
 connect();
 loadTrades();
+loadBankr();
 </script>
 </body>
 </html>

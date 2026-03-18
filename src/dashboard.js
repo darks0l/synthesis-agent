@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { config } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
@@ -66,6 +67,35 @@ export class Dashboard {
         const data = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : [];
         res.json(data);
       } catch { res.json([]); }
+    });
+
+    // Bankr LLM Gateway usage + credits (cached 60s)
+    this._bankrCache = { data: null, ts: 0 };
+    this.app.get('/api/bankr', async (req, res) => {
+      try {
+        const now = Date.now();
+        if (this._bankrCache.data && now - this._bankrCache.ts < 60000) {
+          return res.json(this._bankrCache.data);
+        }
+        const apiKey = config.llm?.bankr?.apiKey;
+        if (!apiKey) return res.json({ error: 'no_key' });
+
+        const [usageRes, creditsRes] = await Promise.all([
+          fetch('https://llm.bankr.bot/v1/usage', { headers: { Authorization: `Bearer ${apiKey}` } }),
+          fetch('https://llm.bankr.bot/v1/credits', { headers: { Authorization: `Bearer ${apiKey}` } }),
+        ]);
+        const usage = await usageRes.json();
+        const credits = await creditsRes.json();
+        const result = {
+          credits: credits.balanceUsd ?? credits.effectiveBalanceUsd ?? null,
+          totalRequests: usage.totals?.totalRequests ?? 0,
+          totalTokens: usage.totals?.totalTokens ?? 0,
+          totalCost: usage.totals?.totalCost ?? 0,
+          models: usage.byModel || [],
+        };
+        this._bankrCache = { data: result, ts: now };
+        res.json(result);
+      } catch (e) { res.json({ error: e.message }); }
     });
   }
 
