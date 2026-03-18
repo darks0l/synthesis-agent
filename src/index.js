@@ -45,6 +45,7 @@ import { MailManager } from './mail.js';
 import { VirtualsACP } from './virtuals.js';
 import { TAEngine } from './ta.js';
 import { Dashboard } from './dashboard.js';
+import { DelegationManager } from './delegation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -216,6 +217,25 @@ async function main() {
   // Initialize TA engine
   const ta = new TAEngine();
   log('main', '📊 TA Engine: ✓ initialized (RSI, MACD, Bollinger, Stochastic, ATR, OBV, VWAP, Fibonacci, S/R, Divergence)');
+
+  // Initialize MetaMask Delegation Framework
+  const delegationMgr = new DelegationManager(provider);
+  const delegationOk = await delegationMgr.init();
+  if (delegationOk && wallet) {
+    // Create initial spending policy delegation using MetaMask caveats
+    const policyDelegation = await delegationMgr.createDelegation(wallet);
+    if (policyDelegation) {
+      log('main', `🔐 MetaMask Delegation: ✓ spending policy encoded as ${policyDelegation.delegation.caveats.length} caveats`);
+      identity.recordReceipt({
+        type: 'metamask_delegation_created',
+        delegationHash: policyDelegation.delegationHash,
+        caveats: policyDelegation.caveatsDescribed,
+        delegate: policyDelegation.delegate,
+      });
+    }
+  } else {
+    log('main', `🔐 MetaMask Delegation: ${delegationOk ? '✓ connected (no wallet for signing)' : '✗ not available'}`)
+  }
 
   // Initialize dashboard (web GUI)
   const dashboardEnabled = !process.argv.includes('--no-dashboard');
@@ -646,6 +666,8 @@ async function main() {
     console.log(`   Virtuals ACP: ${virtualsAcp.enabled ? `${virtualsAcp.stats.jobsPosted} posted, ${virtualsAcp.stats.agentsDiscovered} agents discovered` : 'disabled'}`);
     const taSummary = ta.summary();
     console.log(`   TA Engine: ${taSummary.runs} analyses (last: ${taSummary.lastSignal} ${taSummary.lastConfidence}%)`);
+    const delStatus = delegationMgr.getStatus();
+    console.log(`   MetaMask Delegations: ${delStatus.activeDelegations} active (${delStatus.enforcersAvailable} enforcers)`);
 
     console.log(`   Identity: ${summary.erc8004}`);
     process.exit(0);

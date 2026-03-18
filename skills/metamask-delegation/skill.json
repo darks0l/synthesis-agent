@@ -1,0 +1,44 @@
+{
+  "name": "synthesis-metamask-delegation",
+  "version": "1.0.0",
+  "description": "MetaMask Delegation Framework integration — encode agent spending policies as EIP-712 signed delegations with on-chain caveat enforcers",
+  "category": "governance",
+  "capabilities": [
+    "Create EIP-712 signed delegations using MetaMask's deployed DelegationManager",
+    "Encode spending limits as AllowedTargets, ERC20TransferAmount, ValueLte, LimitedCalls, Timestamp caveats",
+    "Create sub-agent delegations with tighter constraints",
+    "Query delegation status on-chain (active/disabled)",
+    "Open delegations (any redeemer) protected by caveats"
+  ],
+  "contracts": {
+    "DelegationManager": "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3",
+    "AllowedTargetsEnforcer": "0x7F20f61b1f09b08D970938F6fa563634d65c4EeB",
+    "ERC20TransferAmountEnforcer": "0xf100b0819427117EcF76Ed94B358B1A5b5C6D2Fc",
+    "TimestampEnforcer": "0x1046bb45C8d673d4ea75321280DB34899413c069",
+    "LimitedCallsEnforcer": "0x04658B29F6b82ed55274221a06Fc97D318E25416",
+    "ValueLteEnforcer": "0x92Bf12322527cAA612fd31a0e810472BBF106A8F"
+  },
+  "chain": "base",
+  "chainId": 8453,
+  "input": {
+    "type": "object",
+    "properties": {
+      "delegate": { "type": "string", "description": "Address of the delegate (or 'open' for any redeemer)" },
+      "maxUsdcPerTx": { "type": "string", "description": "Maximum USDC per delegation redemption" },
+      "maxCalls": { "type": "number", "description": "Maximum number of redemptions" },
+      "ttlSeconds": { "type": "number", "description": "Time-to-live in seconds" },
+      "allowedTargets": { "type": "array", "items": { "type": "string" }, "description": "Allowed contract addresses" }
+    }
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "delegationHash": { "type": "string" },
+      "signature": { "type": "string" },
+      "caveats": { "type": "array" },
+      "status": { "type": "string" }
+    }
+  },
+  "bankrCompatible": true,
+  "dependencies": ["ethers"]
+}

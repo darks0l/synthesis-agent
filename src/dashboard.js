@@ -145,6 +145,7 @@ export class Dashboard {
         spendingPolicy: '0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477',
         synthesisJobs: '0xCB98F0e2bb429E4a05203C57750A97Db280e6617',
         erc8004: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+        delegationManager: '0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3',
       },
       scanner: {
         pairsScanned: a.pairsScanned || 0,
