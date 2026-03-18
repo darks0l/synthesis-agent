@@ -231,7 +231,7 @@ async function main() {
     llmCalls: 0, llmTokens: 0,
     tradesExecuted: 0, dailySpent: 0, dailyLimit: config.spending.maxDaily,
     lastSpread: null, lastDecision: null, lastTA: null,
-    lpPositions: liquidityMgr ? liquidityMgr.positions.length : 0,
+    lpPositions: 0,
     pairsScanned: 0, opportunitiesFound: 0,
     config: { dashboard: { port: parseInt(process.env.DASHBOARD_PORT || '3000') } },
   };
@@ -247,6 +247,7 @@ async function main() {
     try {
       liquidityMgr = new LiquidityManager(wallet);
       await liquidityMgr.loadExistingPositions();
+      agentState.lpPositions = liquidityMgr.positions.length;
       log('main', `💧 Liquidity Manager: ✓ initialized (${liquidityMgr.positions.length} existing position(s))`);
     } catch (err) {
       log('main', `💧 Liquidity Manager: ✗ ${err.message}`);
