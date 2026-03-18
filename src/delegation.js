@@ -20,7 +20,7 @@ const ENFORCERS = {
   NativeTokenTransfer:   '0xF71af580b9c3078fbc2BBF16FbB8EEd82b330320',
   LimitedCalls:          '0x04658B29F6b82ed55274221a06Fc97D318E25416',
   Timestamp:             '0x1046bb45C8d673d4ea75321280DB34899413c069',
-  ValueLte:              '0x92Bf12322527cAA612fd31a0e810472BBF106A8F',
+  ValueLte:              '0x92bF12322527cAa612fD31a0e810472bBf106a8f',
 };
 
 // Root authority constant (self-signed, no parent delegation)
@@ -33,6 +33,10 @@ const DELEGATION_MANAGER_ABI = [
   'function getDomainHash() view returns (bytes32)',
   'function getDelegationHash((address delegate, address delegator, bytes32 authority, (address enforcer, bytes terms, bytes args)[] caveats, uint256 salt, bytes signature)) pure returns (bytes32)',
   'function disabledDelegations(bytes32) view returns (bool)',
+  'function enableDelegation((address delegate, address delegator, bytes32 authority, (address enforcer, bytes terms, bytes args)[] caveats, uint256 salt, bytes signature))',
+  'function disableDelegation((address delegate, address delegator, bytes32 authority, (address enforcer, bytes terms, bytes args)[] caveats, uint256 salt, bytes signature))',
+  'event EnabledDelegation(bytes32 indexed delegationHash, address indexed delegator, address indexed delegate, (address delegate, address delegator, bytes32 authority, (address enforcer, bytes terms, bytes args)[] caveats, uint256 salt, bytes signature) delegation)',
+  'event DisabledDelegation(bytes32 indexed delegationHash, address indexed delegator, address indexed delegate, (address delegate, address delegator, bytes32 authority, (address enforcer, bytes terms, bytes args)[] caveats, uint256 salt, bytes signature) delegation)',
 ];
 
 // EIP-712 types for the Delegation struct
@@ -310,6 +314,162 @@ export class DelegationManager {
       delegate: subAgentAddress,
       caveats,
     });
+  }
+
+  // ── Enable delegation on-chain (creates tx receipt) ──
+  async enableOnChain(signer, delegationRecord) {
+    const d = delegationRecord.delegation;
+    const delegationTuple = {
+      delegate: d.delegate,
+      delegator: d.delegator,
+      authority: d.authority,
+      caveats: d.caveats.map(c => ({
+        enforcer: c.enforcer,
+        terms: c.terms,
+        args: c.args || '0x',
+      })),
+      salt: d.salt,
+      signature: d.signature,
+    };
+
+    try {
+      const contract = this.contract.connect(signer);
+      log('DELEGATION', `📝 Enabling delegation on-chain: ${delegationRecord.delegationHash}`);
+      // Explicitly fetch nonce to avoid stale cache after prior TXs
+      const nonce = await signer.provider.getTransactionCount(await signer.getAddress(), 'latest');
+      const tx = await contract.enableDelegation(delegationTuple, { nonce });
+      log('DELEGATION', `⏳ TX submitted: ${tx.hash}`);
+      const receipt = await tx.wait();
+      log('DELEGATION', `✅ Delegation enabled on-chain!`);
+      log('DELEGATION', `   TX: ${receipt.hash}`);
+      log('DELEGATION', `   Block: ${receipt.blockNumber}`);
+      log('DELEGATION', `   Gas: ${receipt.gasUsed.toString()}`);
+
+      delegationRecord.enableTxHash = receipt.hash;
+      delegationRecord.enableBlock = receipt.blockNumber;
+      delegationRecord.status = 'enabled_onchain';
+
+      return {
+        success: true,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString(),
+      };
+    } catch (err) {
+      logError('DELEGATION', `Enable on-chain failed: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // ── Disable delegation on-chain (creates tx receipt) ──
+  async disableOnChain(signer, delegationRecord) {
+    const d = delegationRecord.delegation;
+    const delegationTuple = {
+      delegate: d.delegate,
+      delegator: d.delegator,
+      authority: d.authority,
+      caveats: d.caveats.map(c => ({
+        enforcer: c.enforcer,
+        terms: c.terms,
+        args: c.args || '0x',
+      })),
+      salt: d.salt,
+      signature: d.signature,
+    };
+
+    try {
+      const contract = this.contract.connect(signer);
+      log('DELEGATION', `🔒 Disabling delegation on-chain: ${delegationRecord.delegationHash}`);
+      const tx = await contract.disableDelegation(delegationTuple);
+      log('DELEGATION', `⏳ TX submitted: ${tx.hash}`);
+      const receipt = await tx.wait();
+      log('DELEGATION', `✅ Delegation disabled on-chain!`);
+      log('DELEGATION', `   TX: ${receipt.hash}`);
+      log('DELEGATION', `   Block: ${receipt.blockNumber}`);
+      log('DELEGATION', `   Gas: ${receipt.gasUsed.toString()}`);
+
+      delegationRecord.disableTxHash = receipt.hash;
+      delegationRecord.disableBlock = receipt.blockNumber;
+      delegationRecord.status = 'disabled';
+
+      return {
+        success: true,
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        gasUsed: receipt.gasUsed.toString(),
+      };
+    } catch (err) {
+      logError('DELEGATION', `Disable on-chain failed: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // ── Full lifecycle: create → disable → enable → verify ──
+  // Fresh delegations are AlreadyEnabled by default, so we disable first, then re-enable.
+  async runFullLifecycle(signer) {
+    const results = { steps: [], txHashes: [] };
+
+    log('DELEGATION', '═══ Full Lifecycle Test ═══');
+
+    // ── Delegation 1: Spending policy (open delegate) ──
+    log('DELEGATION', '─── Delegation 1: Spending Policy ───');
+    const record1 = await this.createDelegation(signer);
+    if (!record1) {
+      results.steps.push({ step: 'create_1', success: false });
+      return results;
+    }
+    results.steps.push({ step: 'create_1', success: true, hash: record1.delegationHash });
+
+    // Verify active by default
+    const check1a = await this.isDelegationActive(record1.delegationHash);
+    log('DELEGATION', `Initial status: ${check1a ? 'active ✅' : 'disabled'}`);
+    results.steps.push({ step: 'verify_1_active', active: check1a });
+
+    // Disable (TX #1)
+    const disable1 = await this.disableOnChain(signer, record1);
+    results.steps.push({ step: 'disable_1', ...disable1 });
+    if (disable1.txHash) results.txHashes.push(disable1.txHash);
+
+    // Wait for RPC to catch up
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Re-enable (TX #2)
+    const enable1 = await this.enableOnChain(signer, record1);
+    results.steps.push({ step: 'enable_1', ...enable1 });
+    if (enable1.txHash) results.txHashes.push(enable1.txHash);
+
+    // Verify final state
+    await new Promise(r => setTimeout(r, 1000));
+    const check1b = await this.isDelegationActive(record1.delegationHash);
+    log('DELEGATION', `Final status: ${check1b ? 'active ✅' : 'disabled ❌'}`);
+    results.steps.push({ step: 'verify_1_final', active: check1b });
+
+    // ── Delegation 2: Sub-agent delegation (specific delegate) ──
+    log('DELEGATION', '─── Delegation 2: Sub-Agent ───');
+    // Use a dummy sub-agent address for testing
+    const subAgentAddr = '0x0000000000000000000000000000000000000042';
+    const record2 = await this.createSubAgentDelegation(signer, subAgentAddr, {
+      maxUsdc: '1.0',
+      maxCalls: 5,
+      ttlSeconds: 3600,
+    });
+    if (!record2) {
+      results.steps.push({ step: 'create_2', success: false });
+    } else {
+      results.steps.push({ step: 'create_2', success: true, hash: record2.delegationHash });
+
+      // Disable sub-agent delegation (TX #3)
+      const disable2 = await this.disableOnChain(signer, record2);
+      results.steps.push({ step: 'disable_2', ...disable2 });
+      if (disable2.txHash) results.txHashes.push(disable2.txHash);
+    }
+
+    log('DELEGATION', `═══ Lifecycle Complete: ${results.txHashes.length} on-chain TXs ═══`);
+    for (const tx of results.txHashes) {
+      log('DELEGATION', `   🔗 ${config.chain.explorer}/tx/${tx}`);
+    }
+
+    return results;
   }
 
   // ── Describe caveats in human-readable form ──
