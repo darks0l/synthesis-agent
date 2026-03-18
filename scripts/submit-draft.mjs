@@ -5,7 +5,7 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const convLog = readFileSync(join(__dirname, '../CONVERSATION_LOG.md'), 'utf8');
 
-const key = 'sk-synth-58ed68e02fc19482b2198f187cf8c59388353bbd77f0f934';
+const key = readFileSync(join(__dirname, '..', '..', '.keys', 'synthesis-api-key.txt'), 'utf8').trim();
 
 const body = {
   teamUUID: 'debc7354208942a8a647c7cf9daa32f9',
