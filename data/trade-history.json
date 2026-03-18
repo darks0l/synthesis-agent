@@ -1,19 +1,5 @@
 [
   {
-    "timestamp": "2026-03-17T11:24:28.938Z",
-    "pair": "WETH/USDC",
-    "spreadBps": 44,
-    "decision": "execute",
-    "confidence": 65,
-    "txHash": null,
-    "amountIn": "0.0005",
-    "amountOut": null,
-    "source": "self",
-    "erc8183JobId": null,
-    "gasUsed": null,
-    "profitable": null
-  },
-  {
     "timestamp": "2026-03-17T11:25:28.963Z",
     "pair": "WETH/USDC",
     "spreadBps": 43,
@@ -6996,6 +6982,20 @@
     "amountOut": null,
     "source": "orchestrated",
     "erc8183JobId": 62,
+    "gasUsed": null,
+    "profitable": null
+  },
+  {
+    "timestamp": "2026-03-18T02:34:07.887Z",
+    "pair": "WETH/DAI",
+    "spreadBps": 59,
+    "decision": "skip",
+    "confidence": 40,
+    "txHash": null,
+    "amountIn": "0.0005",
+    "amountOut": null,
+    "source": "orchestrated",
+    "erc8183JobId": 63,
     "gasUsed": null,
     "profitable": null
   }

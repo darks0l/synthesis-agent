@@ -16,9 +16,9 @@
       "lastOutcome": null
     },
     "WETH/DAI": {
-      "trades": 101,
+      "trades": 102,
       "wins": 0,
-      "avgSpread": 78,
+      "avgSpread": 77.81372549019608,
       "lastOutcome": null
     }
   },

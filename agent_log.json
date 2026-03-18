@@ -9,6 +9,7 @@
     "erc8183JobsPosted": 2,
     "erc8183JobsCompleted": 1,
     "contractsDeployed": 5,
+    "delegationTxs": 3,
     "llmCallsAttempted": 800,
     "llmCallsSucceeded": 0,
     "heuristicFallbacks": 800,
@@ -120,6 +121,42 @@
       "decision": "check_before_trade",
       "reasoning": "Every trade queries AgentSpendingPolicy.wouldApprove() before execution. Human-set limits enforced on-chain.",
       "outcome": "approved"
+    },
+    {
+      "timestamp": "2026-03-18T02:33:02Z",
+      "type": "metamask_delegation",
+      "tool": "delegation-framework",
+      "input": { "action": "disable_spending_policy_delegation", "delegationManager": "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3", "caveats": ["AllowedTargets", "ERC20TransferAmount", "ValueLte", "LimitedCalls", "Timestamp"] },
+      "decision": "disable",
+      "reasoning": "Full lifecycle test: created EIP-712 signed delegation encoding spending policy as 5 caveat enforcers, then disabled on-chain.",
+      "outcome": "success",
+      "txHash": "0xca082aaa323e64f355c3aa80b5912b5bfc9539105c5dc85e6d5a2fde1afc2006",
+      "blockNumber": 43505917,
+      "gasUsed": "87168"
+    },
+    {
+      "timestamp": "2026-03-18T02:33:06Z",
+      "type": "metamask_delegation",
+      "tool": "delegation-framework",
+      "input": { "action": "enable_spending_policy_delegation", "delegationHash": "0x6d81a9f5de73b449936f0ad82dd57679840d8e8ee235de06c7741b273d42a79a" },
+      "decision": "enable",
+      "reasoning": "Re-enabled previously disabled delegation — proves full disable→enable lifecycle on DelegationManager.",
+      "outcome": "success",
+      "txHash": "0x31578bbb65cf2624185d3f8de9c1391f87fd1a87d21237375e220104dd02d5da",
+      "blockNumber": 43505919,
+      "gasUsed": "65215"
+    },
+    {
+      "timestamp": "2026-03-18T02:33:14Z",
+      "type": "metamask_delegation",
+      "tool": "delegation-framework",
+      "input": { "action": "disable_sub_agent_delegation", "delegate": "0x0000000000000000000000000000000000000042", "caveats": ["AllowedTargets", "ERC20TransferAmount", "LimitedCalls", "Timestamp"] },
+      "decision": "disable",
+      "reasoning": "Created and immediately disabled a sub-agent delegation with tighter caveats (1 USDC, 5 calls, 1h TTL) — demonstrates agent-to-agent delegation management.",
+      "outcome": "success",
+      "txHash": "0x8781969ff369c3ac03dc09f8d968cdbf6573bfd3b2a88596c59be71abd52a721",
+      "blockNumber": 43505920,
+      "gasUsed": "80544"
     }
   ],
   "safetyEvents": [
