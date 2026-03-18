@@ -29,10 +29,11 @@ export class Dashboard {
 
   _setupRoutes() {
     // Serve static dashboard
+    const publicDir = resolve(projectRoot, 'public');
+    this.app.use(express.static(publicDir));
     this.app.get('/', (req, res) => {
-      res.sendFile(join(projectRoot, 'public', 'index.html'));
+      res.sendFile(resolve(publicDir, 'index.html'));
     });
-    this.app.use('/public', express.static(join(projectRoot, 'public')));
 
     // API endpoints
     this.app.get('/api/status', (req, res) => {
