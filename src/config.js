@@ -57,7 +57,7 @@ export const config = {
   chain: {
     name: 'base',
     chainId: 8453,
-    rpc: process.env.BASE_RPC || 'https://mainnet.base.org',
+    rpc: process.env.BASE_RPC || 'https://1rpc.io/base',
     wss: process.env.BASE_WSS || 'wss://base-mainnet.g.alchemy.com/v2/demo',
     explorer: 'https://basescan.org',
   },
