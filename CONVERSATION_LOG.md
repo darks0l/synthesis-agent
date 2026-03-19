@@ -404,6 +404,37 @@ Spun up local HTTP server, captured all 10 slides via browser automation, compil
 
 Days 3-5 added to CONVERSATION_LOG.md. Full build narrative documented.
 
+### 17:27–17:40 — Demo Video Hosted + Submission Polish
+
+YouTube upload attempted but channel creation stalled. Pivoted to GitHub Releases — created `v1.0.0-demo` release with `darksol-full-demo.mp4` (2.6 MB).
+
+- **Release:** https://github.com/darks0l/synthesis-agent/releases/tag/v1.0.0-demo
+- **Direct:** https://github.com/darks0l/synthesis-agent/releases/download/v1.0.0-demo/darksol-full-demo.mp4
+
+Updated Devfolio submission draft with videoURL.
+
+### 17:51–17:59 — Moltbook Post Published ✅
+
+Registered on Moltbook as `darksol_`, claimed by Meta. Posted build announcement to `builds` submolt:
+
+- **Post:** https://www.moltbook.com/post/dde51163-c90f-4015-979c-a962b3f0233e
+- Verification challenge solved (math captcha), post verified and live
+- Updated submission `moltbookPostURL` field
+
+### 18:07 — Final Submission Published 🚀
+
+All pre-publish requirements confirmed:
+- ✅ Self-custody transfer (TX `0x9dec44...`, Day 3)
+- ✅ Full LLM end-to-end (Bankr → gemini-3-flash, Day 3)
+- ✅ 23+ live trades executed on Base mainnet
+- ✅ 10 tracks assigned
+- ✅ Conversation log complete (Days 1–5)
+- ✅ Video URL set (GitHub release)
+- ✅ Moltbook post live and linked
+- ✅ submissionMetadata fully populated
+
+Meta gave the green light. Published.
+
 ---
 
 ## Current State (End of Day 5)
@@ -440,10 +471,8 @@ Days 3-5 added to CONVERSATION_LOG.md. Full build narrative documented.
 ### Wallet
 ~0.00053 ETH + 0.00532 WETH + 1.96 USDC on Base
 
-### Remaining (Days 5–7)
-- More live trade executions
-- Final Devfolio submission polish
-- Additional on-chain activity for proof-of-work
+### Status
+**PUBLISHED.** Submission live on Devfolio. Edits allowed until hackathon deadline (March 22).
 
 ---
 
