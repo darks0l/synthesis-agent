@@ -5,6 +5,19 @@
 **Submission:** synthesis.devfolio.co
 **Team ID:** debc7354208942a8a647c7cf9daa32f9
 **Repo:** https://github.com/darks0l/synthesis-agent
+**Status:** ✅ PUBLISHED (March 18, 2026)
+
+---
+
+## Submission Status
+
+**Published on Devfolio** — editable until March 22 deadline.
+- Slug: `darksol-autonomous-agent-economy-stack-0163`
+- UUID: `d4a5a7bb5c5645bc996457b0f1f84757`
+- Video: GitHub release (darksol-full-demo.mp4, 2.6 MB)
+- Moltbook: https://www.moltbook.com/post/dde51163-c90f-4015-979c-a962b3f0233e
+- Conversation Log: Days 1-5 complete
+- 10 tracks submitted
 
 ---
 
@@ -15,115 +28,74 @@
 - [x] Mint ERC-8004 on-chain identity
 - [x] Scaffold synthesis-agent project
 - [x] Implement core modules (scanner, executor, LLM, identity, reporter)
-- [x] Verify dry run works
 - [x] Push to GitHub (public)
-- [x] Store Uniswap API key
-- [x] Execute first real on-chain swap — TX: 0x10dfa861...
-- [x] Wire Bankr LLM Gateway (enabled, needs credits — fallback chain active)
-- [x] Multi-provider LLM routing (Bankr→OpenAI→Anthropic→OpenRouter→Ollama→heuristic)
+- [x] Execute first real on-chain swap
+- [x] Multi-provider LLM routing (6 providers)
 - [x] Build ERC-8183 orchestrator + feedback loop
-- [x] Deploy SynthesisJobs contract on Base — `0xCB98F0e2bb429E4a05203C57750A97Db280e6617`
-- [x] Swap USDC→ETH for gas
-- [x] Bankr Router v1.2.0 published (retry chain, timeouts, health check)
+- [x] Deploy SynthesisJobs contract on Base
+- [x] Deploy AgentSpendingPolicy contract on Base
+- [x] Bankr Router v1.2.0 published (92 tests)
+- [x] Built LP module (Uniswap V3 concentrated liquidity)
+- [x] Built AgentMail module
+- [x] 38 tests passing, v0.2.0 released
 
-### Day 2 cont. (March 16) — Scaling Up
-- [x] Ran scanner overnight — 761 cycles, 13 trades, $13 spent
-- [x] Added prepaid card module (DARKSOL Cards API integration)
-- [x] Deployed AgentSpendingPolicy contract — `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`
-- [x] Swapped USDC→ETH for gas (2x refuels)
-- [x] Wire spending policy into executor (on-chain wouldApprove + requestApproval)
-- [x] Add Uniswap Developer Platform API integration (3-source scanner)
-- [x] Built LP module (liquidity.js) — Uniswap V3 concentrated liquidity
-- [x] Post first ERC-8183 job on-chain (Job #1 full lifecycle complete)
-- [x] Start submission README + architecture diagram (10KB README done)
-- [x] COLLABORATION.md — human-agent decision log for submission
-- [x] Scanner restarted with all integrations live
-- [ ] Run arb scanner live → keep generating on-chain activity (⚠ low ETH: 0.0001)
-- [x] Built AgentMail module (src/mail.js) — inter-agent communication
-- [x] Full codebase audit + 10 fixes (wallet dedup, slippage, CLI, dead code, .env)
-- [x] 38 tests passing (config, feedback, cards, LLM, mail)
-- [x] Version bump to v0.2.0
+### Day 3 (March 17) — Integration
+- [x] Auto-refuel module (USDC→ETH when gas low)
+- [x] Bankr LLM fixed (gemini-3-flash) — full LLM end-to-end ✅
+- [x] Live dashboard (WebSocket, real-time panels)
+- [x] MetaMask Delegation Framework (3 on-chain TXs, 5 caveat enforcers)
+- [x] Deploy to Status Network Sepolia (3 contracts, gasless)
+- [x] ERC-8004 self-custody transfer (TX 0x9dec44...)
+- [x] Added MetaMask Delegations track (now 10 tracks)
 
-### Day 3-4 (March 17-18) — Integration & Demo
-- [ ] Get Bankr LLM credits funded (blocker — running heuristic only)
-- [ ] ETH top-up for continued trading
-- [ ] Wire agent signer for autonomous execution
-- [ ] Deploy to Status Network Sepolia (gasless $50 prize)
-- [ ] Record demo video (terminal in action)
-- [ ] Run autonomous agent loop live end-to-end with LLM
+### Day 4 (March 18) — Demo & LP
+- [x] Minted Uniswap V3 LP position (Token #4827378)
+- [x] Demo video created (10-slide HTML → ffmpeg, 1920×1080)
+- [x] Demo video hosted on GitHub Releases (v1.0.0-demo)
+- [x] Devfolio draft updated with video + conversation log
 
-### Day 5-6 (March 19-20) — Polish
-- [ ] Write submission narrative
-- [ ] Run full autonomous loop live (24h+ with LLM)
-- [ ] Open source terminal + facilitator repos (already public)
-- [ ] Architecture diagram (visual, for submission)
-
-### Day 7 (March 21-22) — Submit
-- [ ] Final submission on Devfolio
-- [ ] Verify all repos public
-- [ ] Verify all on-chain artifacts linked
-- [ ] Submit to all target tracks
-- [ ] Double-check all links work
+### Day 5 (March 18 cont.) — Submission
+- [x] Conversation log complete (Days 1-5)
+- [x] Moltbook post published and verified
+- [x] Devfolio submission PUBLISHED
+- [x] Confirmed in public gallery (position 109/145)
+- [x] Self-custody transfer confirmed (409 on re-init)
+- [x] All 10 tracks assigned
 
 ---
 
-## Prize Targets
-1. Let the Agent Cook — $4k/$2.5k/$1.5k
-2. ERC-8004 Agents With Receipts — $4k/$3k/$1k
-3. ERC-8183 Open Build (Virtuals) — $2k
-4. Bankr LLM Gateway — $3k/$1.5k/$500
-5. Uniswap Agentic Finance — $2.5k/$1.5k/$1k
-6. Open Track — $14.5k
-7. bond.credit — $1k/$500
-8. AgentCash x402 — $1k/$500/$250
-9. Status Network Gasless — $50
+## Final Stats
+| Metric | Value |
+|--------|-------|
+| Commits | 45+ |
+| Source modules | 14 |
+| Files tracked | 60+ |
+| Lines of code | ~19,000+ |
+| Tests | 38/38 passing |
+| Contracts deployed | 5 |
+| Live trades | 23+ |
+| Scanner cycles | 800+ |
+| Prize tracks | 10 |
+| LLM providers | 6 |
+
+## Prize Tracks (10)
+1. Synthesis Open Track — $25k pool
+2. Agent Services on Base — $5k pool
+3. Autonomous Trading Agent — $5k pool
+4. Let the Agent Cook — $8k pool
+5. Agentic Finance (Uniswap) — $3k pool
+6. MetaMask Delegations — $3k pool
+7. bond.credit — $2.5k pool
+8. Bankr LLM Gateway — $2k pool
+9. ERC-8183 Open Build — $2k pool
+10. Status Network — $50
 
 ## On-Chain Artifacts
-- ERC-8004 TX: https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba
-- Agent Address: `0x3e6e304421993D7E95a77982E11C93610DD4fFC5`
-- SynthesisJobs Contract: `0xCB98F0e2bb429E4a05203C57750A97Db280e6617` — [BaseScan](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617)
-- USDC→ETH Swap: `0xbe7f5b9866144927d76febcc723be328cc14c7257348ffee3bf3522766e677f0`
-- WETH Unwrap: `0x73faf8551f0e0b4b908bd5d4eeebb92df6f7f7f8cf485d79a3ab2defc11d4bb3`
-- Trade TX #1: `0x10dfa8612b8eb23258ec9f8b832067142a2353b29c2b763cf78ccf82167ff259`
-- Trade TX #2: `0x7b72228d7e195f0dd01e9f5fd6769076e306e726143ffe654f1299e5c17edfd1`
-- AgentSpendingPolicy: `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477` — [BaseScan](https://basescan.org/address/0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477)
-- USDC→ETH Refuel #2: `0x4167abf69ee0ea7a20c818a5b92af937c55fb3f2ef08d0b5da1bd69563d21de2`
-
-## Daily Log
-### March 15
-- Registered for hackathon
-- Minted ERC-8004 identity on Base
-- Built synthesis-agent from scratch (8 modules, ~600 lines)
-- Dry run successful — scanner found 45bps WETH/USDC spread
-- Pushed to GitHub: https://github.com/darks0l/synthesis-agent
-- Received $10 ETH funding from Meta
-- Stored Uniswap + Bankr API keys
-- Fixed key parsing, USDC balance fallback, smart LLM heuristic
-- **FIRST LIVE TRADE** — 0.0005 ETH → 1.05 USDC (×10 trades, earned 11.56 USDC)
-- Built ERC-8183 orchestrator (job posting, self-fulfill, feedback loop)
-- Built multi-provider LLM routing (6 providers, auto-fallback)
-- **Deployed SynthesisJobs contract** to Base: `0xCB98F0e2bb429E4a05203C57750A97Db280e6617`
-- Swapped 10 USDC → ETH for gas, unwrapped WETH
-- Published @darksol/bankr-router v1.2.0 (upstream retry, timeouts, health check)
-- Wallet: ~0.00474 ETH + 1.56 USDC
-
-### March 16
-- Scanner ran overnight: 761 cycles, 13 total trades, $13 daily spend
-- Added `src/cards.js` — prepaid card ordering via DARKSOL Cards API
-- Swapped 5 USDC → ETH (2x refuels to keep scanner running)
-- **Deployed AgentSpendingPolicy** to Base: `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`
-  - 2 USDC/tx limit, 20 USDC/day, 30s cooldown
-  - Approved targets: Uniswap SwapRouter02 + Aerodrome Router
-  - Human-controlled: owner sets limits, agent cannot raise them
-  - Emergency freeze function for instant kill
-- Wired spending policy into executor (on-chain wouldApprove + requestApproval)
-- Added Uniswap Developer Platform API as 3rd scanner source
-- Built `src/liquidity.js` — Uniswap V3 concentrated LP management (497 lines)
-- ERC-8183 Job #1 full lifecycle completed on-chain
-- Built `src/mail.js` — AgentMail inter-agent communication (339 lines)
-- Full codebase audit: fixed wallet dedup, slippage protection, dead code, CLI --help/--version
-- Created `.env.example` + `.env` support for portability
-- Wrote 38 tests (config, feedback, cards, LLM, mail) — all passing
-- **v0.2.0 released** — 19 commits, 48 files, 19,364 lines, 11 source modules
-- Added ERC-8183 Open Build track (Virtuals, $2k) — now targeting 9 tracks
-- Wallet: ~0.0001 ETH + 11.5 USDC on Base
+- Agent Wallet: `0x3e6e304421993D7E95a77982E11C93610DD4fFC5`
+- ERC-8004 Identity: Token #31929 (self-custody)
+- SynthesisJobs (ERC-8183) on Base: `0xCB98F0e2bb429E4a05203C57750A97Db280e6617`
+- AgentSpendingPolicy on Base: `0xA928fC2132EB4b7E4E96Bb5C2aA011a202290477`
+- Uniswap V3 LP Position: Token #4827378
+- MetaMask Delegation TXs: 3 on-chain (disable/enable/sub-agent)
+- SynthesisIdentity on Status Sepolia: `0x7Fb22E58cD1A6567CfF129d880Cc8db89190974A`
+- SynthesisJobs on Status Sepolia: `0x95C7CA9eA98C97FFB82764e63e0d19FcCFD42956`

@@ -9,7 +9,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/Tests-62%2F62-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-71%2F71-brightgreen.svg)]()
 [![Base](https://img.shields.io/badge/Chain-Base-blue.svg)](https://base.org)
 [![ERC-8004](https://img.shields.io/badge/ERC--8004-Identity-purple.svg)](https://basescan.org/tx/0x539438d51803ed2d2a2c7ef0429493d4b86fa1d521717c69d2e9d6593a62efba)
 [![ERC-8183](https://img.shields.io/badge/ERC--8183-Agentic%20Commerce-orange.svg)](https://basescan.org/address/0xCB98F0e2bb429E4a05203C57750A97Db280e6617)
@@ -127,7 +127,7 @@ node src/index.js --once --verbose
 # Continuous live mode (scans every 60s, dashboard at http://localhost:3000)
 npm start
 
-# Run tests (62/62)
+# Run tests (71/71)
 npm test
 
 # Run ERC-8183 lifecycle demo
@@ -388,7 +388,7 @@ All skills are Bankr-compatible and can be outsourced via ERC-8183 contracts. Se
 | Commits | 35+ |
 | Source modules | 16 |
 | Tracked files | 49+ |
-| Tests | 62/62 passing |
+| Tests | 71/71 passing |
 | Lines of code | ~19,000+ |
 | On-chain transactions | 10+ |
 | Chains deployed | 2 (Base mainnet + Status Sepolia) |
