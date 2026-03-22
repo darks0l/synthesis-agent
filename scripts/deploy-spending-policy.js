@@ -4,15 +4,19 @@ import { ethers } from 'ethers';
 import { readFileSync } from 'fs';
 import { config } from '../src/config.js';
 
-const raw = readFileSync('C:/Users/favcr/.openclaw/workspace/.keys/base-deployer.txt', 'utf8');
+import { homedir } from 'os';
+const raw = readFileSync(homedir() + '/.openclaw/workspace/.keys/base-deployer.txt', 'utf8');
 const match = raw.match(/DEPLOYER_KEY=(0x[a-fA-F0-9]+)/);
 const pk = match[1];
 
 const provider = new ethers.JsonRpcProvider(config.chain.rpc);
 const wallet = new ethers.Wallet(pk, provider);
 
-const abi = JSON.parse(readFileSync('C:/Users/favcr/.openclaw/workspace/synthesis-agent/contracts_AgentSpendingPolicy_sol_AgentSpendingPolicy.abi', 'utf8'));
-const bin = readFileSync('C:/Users/favcr/.openclaw/workspace/synthesis-agent/contracts_AgentSpendingPolicy_sol_AgentSpendingPolicy.bin', 'utf8');
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const abi = JSON.parse(readFileSync(resolve(__dirname, '../contracts_AgentSpendingPolicy_sol_AgentSpendingPolicy.abi'), 'utf8'));
+const bin = readFileSync(resolve(__dirname, '../contracts_AgentSpendingPolicy_sol_AgentSpendingPolicy.bin'), 'utf8');
 
 async function main() {
   console.log(`Deployer: ${wallet.address}`);
